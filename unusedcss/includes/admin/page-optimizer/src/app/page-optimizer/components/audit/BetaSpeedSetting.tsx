@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowPathIcon, CheckCircleIcon, Cog8ToothIcon, XCircleIcon } from "@heroicons/react/24/solid";
+import { ArrowPathIcon, CheckCircleIcon, Cog8ToothIcon, XCircleIcon  } from "@heroicons/react/24/solid";
+import { InformationCircleIcon  } from "@heroicons/react/24/outline";
+
 import {
     CSSDelivery,
     JavascriptDelivery,
@@ -17,7 +19,7 @@ import { Checkbox } from "components/ui/checkbox";
 import { ThunkDispatch } from "redux-thunk";
 import { AppAction, AppState, RootState } from "../../../../store/app/appTypes";
 import { useDispatch, useSelector } from "react-redux";
-import { changeGear, updateSettings } from "../../../../store/app/appActions";
+import {changeGear, getCSSStatus, updateSettings} from "../../../../store/app/appActions";
 
 import AppButton from "components/ui/app-button"
 
@@ -70,7 +72,7 @@ export const Status = React.memo(({ status }: { status: AuditSetting['status'] }
 
     // status.status = 'processing';
 
-    if (status.status === 'failed') {
+    if (status.status === 'failed' || status.status === 'Miss') {
         return (
             <>
                 <div className='flex gap-1 items-center text-xs	border border-rose-600 w-fit rounded-lg px-1 py-py'>
@@ -83,7 +85,7 @@ export const Status = React.memo(({ status }: { status: AuditSetting['status'] }
                             <span className='text-brand-500 ml-4'>{status.error?.message ? status.error?.message : 'Failed to Optimize'}</span>
                         </div>
                     </Indicator>
-                    Failed
+                    <span className="capitalize">{status.status}</span>
                 </div>
             </>
         );
@@ -113,13 +115,13 @@ export const Status = React.memo(({ status }: { status: AuditSetting['status'] }
         )
     }
 
-    if (status.status === 'success') {
+    if (status.status === 'success' || status.status === 'Hit') {
         return (
             <>
                 <div className=' flex gap-1.5 items-center text-xs w-fit rounded-lg'>
                     <Circle className={cn(
                         'animate-pulse w-2.5 fill-green-600 stroke-0 -mt-[1px]'
-                    )} />{status?.message || 'Optimized'}
+                    )} />{status?.message || status.status === 'Hit'? 'Hit' : 'Optimized'}
                 </div>
             </>
         )
@@ -134,7 +136,7 @@ const Setting = ({ updateValue, settings, index, hideActions, showIcons = true, 
         return <></>
     }
 
-    const dispatch: ThunkDispatch<RootState, unknown, AppAction> = useDispatch();
+    const { dispatch, uucssError } = useCommonDispatch()
     const { mode, options } = useAppContext()
     const [open, setOpen] = React.useState(false);
     const [loading, setLoading] = useState(false)
@@ -246,10 +248,50 @@ const Setting = ({ updateValue, settings, index, hideActions, showIcons = true, 
     useEffect(() => {
         if ((settings.status && mainInput.value) || (settings?.status && mainInput.control_type === 'button')) {
             setShowStatus(true)
+        }else{
+            setShowStatus(false)
         }
-    }, []);
+    }, [settings]);
+
+    const [settingsStatus, setSettingsStatus] = useState(settings.status);
+
+    useEffect(() => {
+
+        if (!settings.status || !mainInput.value) return;
+
+        const isStatusValid = ['processing', 'queued'].includes(settings.status.status);
+        const cssStatusKey = {
+            'Critical CSS': 'cpcss',
+            'Remove Unused CSS': 'uucss',
+            'Page Cache': 'cache',
+            'Cache Policy': 'cache_policy',
+        }[settings.name];
+
+        if (!isStatusValid || !cssStatusKey) return;
+
+        const fetchStatus = async () => {
+            try {
+                const status = await dispatch(getCSSStatus(options, options?.optimizer_url, [cssStatusKey]));
+                const currentStatus = status[cssStatusKey];
+
+                setSettingsStatus(currentStatus);
+
+                if (['success', 'failed', 'Miss'].includes(currentStatus.status)) {
+                    clearInterval(intervalId);
+                }
+            } catch (error) {
+                console.error('Error fetching CSS status:', error);
+                clearInterval(intervalId);
+            }
+        };
+
+        fetchStatus();
+        const intervalId = setInterval(fetchStatus, 5000);
+
+        return () => clearInterval(intervalId);
 
 
+    }, [settings, options, dispatch, open]);
 
     return (
         <>
@@ -333,15 +375,24 @@ const Setting = ({ updateValue, settings, index, hideActions, showIcons = true, 
                                     )}
                                 </Mode>
 
-                                {showStatus && (
+                                {uucssError && mainInput.key === 'uucss_enable_uucss' ? (
                                     <div className='px-1'>
-                                        <Status status={settings.status} />
+                                        <div
+                                            className='flex gap-1 items-center text-xs	border border-amber-600 bg-amber-300/30 w-fit rounded-lg px-1 py-[2px] leading-3'>
+                                            <InformationCircleIcon className="h-[18px] w-[18px] text-amber-600" />
+                                            Unused CSS and Critical CSS optimization options cannot be enabled simultaneously.
+                                        </div>
+                                    </div>
+                                ) : showStatus && (
+                                    <div className='px-1'>
+                                        <Status status={settingsStatus}/>
                                     </div>
                                 )}
 
                                 <Mode mode='onboard'>
-                                    <TooltipText text={<><span className='text-purple-750 font-medium'>PRO</span> feature</>}>
-                                        <Lock className='w-4 text-brand-400' />
+                                    <TooltipText
+                                        text={<><span className='text-purple-750 font-medium'>PRO</span> feature</>}>
+                                        <Lock className='w-4 text-brand-400'/>
                                     </TooltipText>
                                 </Mode>
                             </>

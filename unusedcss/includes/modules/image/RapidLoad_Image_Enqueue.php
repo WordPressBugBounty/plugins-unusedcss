@@ -281,7 +281,7 @@ class RapidLoad_Image_Enqueue
 
                 }
 
-                if ($background_image_found) {
+                if ($background_image_found && isset($this->options['uucss_lazy_load_images']) && $this->options['uucss_lazy_load_images'] == "1") {
                     $inline_style->style = implode(";", $_style_lines);
                     $inline_style->{'data-rapidload-lazy-bg'} = $replace_url; // Assuming you want to store the lazy-loaded URL
                     $inline_style->{'data-rapidload-lazy-method'} = 'viewport';
@@ -392,6 +392,12 @@ class RapidLoad_Image_Enqueue
             $iframes = $this->dom->find( 'iframe[src]' );
 
             foreach ( $iframes as $index => $iframe ) {
+
+                $parent = $iframe->parent();
+
+                if(isset($parent) && $parent->tag == 'noscript'){
+                    continue;
+                }
 
                 if ($iframe->srcdoc) {
 
