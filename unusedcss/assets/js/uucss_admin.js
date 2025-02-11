@@ -787,8 +787,8 @@
                             tippyOptions.onHide = function () {
                             }
 
-                            var code = (rowData.meta.error && rowData.meta.error.code) ? rowData.meta.error.code : 500;
-                            var message = (rowData.meta.error && rowData.meta.error.message) ? rowData.meta.error.message : 'Unknown Error Occurred';
+                            var code = (rowData.meta && rowData.meta.error && rowData.meta.error.code) ? rowData.meta.error.code : 500;
+                            var message = (rowData.meta && rowData.meta.error && rowData.meta.error.message) ? rowData.meta.error.message : 'Unknown Error Occurred';
                             tippyOptions.content = '<div class="error-tooltip"><h5>Error</h5> <span><strong>CODE :</strong> ' + code + '</span> <br><span>' + message + '</span></div>';
 
                             //tippyOptions.triggerTarget = $(td).closest('tr')[0]
@@ -1469,7 +1469,7 @@
                             return
                         }
 
-                        if (rowData.status === 'success' && (!rowData.meta.warnings || !rowData.meta.warnings.length)) {
+                        if (rowData.status === 'success' && (!rowData.meta?.warnings || !rowData.meta?.warnings?.length)) {
                             var hits = rowData.meta && rowData.meta.stats && rowData.meta.stats.success_count > 0 || Number(rowData.success_count) > 0 ? 'hits-success' : '';
                             stat.find('span').append('<span class="dashicons dashicons-yes-alt '+ hits +'"></span>');
                             tippy(stat.find('span')[0], tippyOptions);
