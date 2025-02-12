@@ -1,22 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { m } from "framer-motion";
-import {cn, hasQueryParam} from "lib/utils";
+import {cn, hasQueryParam, removeQueryParam} from "lib/utils";
 import StepOne from "app/onboard/components/StepOne";
 import StepTwo from "app/onboard/components/StepTwo";
 import StepThree from "app/onboard/components/StepThree";
 import StepFour from "app/onboard/components/StepFour";
 import { AnimatePresence, motion } from "framer-motion";
-
+import { useAppContext } from "../../context/app";
 
 export default function Onboard() {
     const [currentStep, setCurrentStep] = useState(0);
+    const { uucssGlobal } = useAppContext();
 
     useEffect(() => {
         const hasNonce = hasQueryParam("nonce");
         if (hasNonce) {
             setCurrentStep(2);
-        }
+            //removeQueryParam("nonce");
+            const url = new URL(window.location.href);
+            const page = url.searchParams.get('page');
+            url.search = page ? `?page=${page}` : '';
+            window.history.replaceState({}, '', url.toString());
+        } 
     }, []);
+
 
     const steps = [
         { component: <StepOne onNext={() => setCurrentStep(1)} />, key: "stepOne" },

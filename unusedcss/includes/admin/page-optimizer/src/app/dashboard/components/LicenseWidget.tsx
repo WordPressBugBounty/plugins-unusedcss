@@ -15,26 +15,15 @@ type InputChangeHandler = React.ChangeEventHandler<HTMLInputElement>;
 const LicenseWidget = () => {
     const [isVisible, setIsVisible] = useState(true);
 
-    // const storedLicense = localStorage.getItem('rapidLoadLicense');
-    // const parsedStoredLicense = storedLicense ? JSON.parse(storedLicense) : null;
-    const [licenseInfo, setLicenseInfo] = useState<License | null>(() => {
-        const storedLicense = localStorage.getItem('rapidLoadLicense');
-        if (storedLicense) {
-            try {
-                return JSON.parse(storedLicense);
-            } catch (error) {
-                console.error("Error parsing license data", error);
-                return null;
-            }
-        }
-        return null;
-    });
-    const [inputLicense, setInputLicense] = useState("");
-    const [showInput, setShowInput] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [licenseMessage, setLicenseMessage] = useState("");
     const { license } = useSelector(optimizerData);
     const { options } = useAppContext();
+
+    const [licenseInfo, setLicenseInfo] = useState<License | null>(() => options.rapidload_license_data || null);
+    const [inputLicense, setInputLicense] = useState("");
+    const [showInput, setShowInput] = useState(false);
+    const [loading, setLoading] = useState(false);
+   
     const { dispatch } = useCommonDispatch();
 
 
@@ -66,7 +55,7 @@ const LicenseWidget = () => {
     const toggleVisibility = () => setIsVisible(!isVisible);
 
     const renderLicenseStatus = () => {
-        const isActivated = !!licenseInfo?.licensedDomain;
+        const isActivated = !!licenseInfo;
         const Icon = isActivated ? CheckBadgeIcon : XCircleIcon;
         const textColor = isActivated ? "text-purple-900/90" : "text-red-600";
         const bgColor = isActivated ? "text-purple-900/80" : "text-red-600";
@@ -89,7 +78,7 @@ const LicenseWidget = () => {
                 : ''
         },
         { label: 'Plan', value: licenseInfo?.plan },
-        { label: 'Active Domain', value: licenseInfo?.licensedDomain }
+        { label: 'Active Domain', value: licenseInfo?.licensedDomain? licenseInfo?.licensedDomain : options.optimizer_url}
     ];
 
     const renderLicenseDetails = () => (
@@ -163,7 +152,7 @@ const LicenseWidget = () => {
                
                     <div className="flex flex-col p-6 pb-0 gap-2">
                         <div className="text-lg font-bold">
-                            {licenseInfo?.licensedDomain ? (
+                            {licenseInfo ? (
                                 <span className="text-brand-400/50 dark:text-brand-300">Welcome back, <span className="text-brand-950">{licenseInfo?.name}</span></span>
                             ) : (
                                 <span className="text-brand-400/90 dark:text-brand-300">Connect your license</span>
@@ -178,7 +167,7 @@ const LicenseWidget = () => {
                         <div className="h-1 bg-brand-950 border-b border-brand-950 border-2" />
                         License Info:
                         {JSON.stringify(licenseInfo?.licensedDomain)} */}
-                        {!licenseInfo?.licensedDomain ? (
+                        {!licenseInfo ? (
                             <>
                                 <span>Slow load times are the #1 reason for high bounce rates and one of the root causes of poor Google Rankings.</span>
                                 {showInput ? renderLicenseInput() : (
@@ -206,7 +195,7 @@ const LicenseWidget = () => {
                     <div className="flex flex-col gap-2">
                         <div
                             className="flex gap-6 justify-end p-6 text-sm font-semibold relative before:absolute before:left-0 before:right-0 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-white before:via-brand-200 before:to-white">
-                            {licenseInfo?.licensedDomain ? (
+                            {licenseInfo ? (
                                 <>
                                     <button className="cursor-pointer text-brand-500 py-1.5" onClick={() => window.open('https://app.rapidload.io/', 'blank')}>View My Account</button>
                                     <button className="cursor-pointer bg-brand-100/90 text-brand-950 py-1.5 px-4 rounded-lg" onClick={() => window.open('https://app.rapidload.io/subscription', 'blank')}>Upgrade</button>

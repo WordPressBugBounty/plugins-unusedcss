@@ -121,7 +121,7 @@ const App = ({ popup, _showOptimizer = false }: {
     const [showStepTwo, setShowStepTwo] = useState(false);
 
     useEffect(() => {
-        if(!uucssGlobal?.on_board_complete){
+        if(uucssGlobal?.on_board_complete == ''){
             return;
         }
 
@@ -247,6 +247,7 @@ const App = ({ popup, _showOptimizer = false }: {
     // }, [activeRoute, onboardCompleted]);
     useEffect(() => {
         const hasNonce = hasQueryParam("nonce");
+        const hasOnboard = window.location.hash.includes("onboard");
 
         if (!(isAdminPage || isDev)) return;
 
@@ -261,9 +262,13 @@ const App = ({ popup, _showOptimizer = false }: {
             return;
         }
 
-        if (!uucssGlobal?.on_board_complete || hasNonce) {
+        if (uucssGlobal?.on_board_complete == '' || hasNonce) {
             window.location.hash = "#/onboard";
             setActiveRoute( "/onboard");
+            return;
+        }else if(uucssGlobal?.on_board_complete == '1' && !hasNonce && hasOnboard){
+            window.location.hash = "#/";
+            setActiveRoute( "/");
             return;
         }
         window.location.hash = activeRoute;
