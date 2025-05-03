@@ -16,7 +16,8 @@ import {
     UPDATE_SETTINGS,
     UPDATE_TEST_MODE,
     SET_DIAGNOSTIC_RESULTS,
-    SET_DIAGNOSTIC_PROGRESS
+    SET_DIAGNOSTIC_PROGRESS,
+    UPDATE_GENERAL_SETTINGS
 } from "./appTypes";
 import ApiService from "../../services/api";
 import Audit from "app/page-optimizer/components/audit/Audit";
@@ -378,6 +379,7 @@ export const updateLicense = (options: WordPressOptions, data?: any): ThunkActio
 
         try {
             const connectLicense = await api.updateLicense(data);
+            
             if (connectLicense.success) {
                 dispatch({
                     type: LICENSE_INFORMATION,
@@ -488,7 +490,7 @@ export const fetchPosts = (options: WordPressOptions): ThunkAction<void, RootSta
     };
 };
 
-export const fetchReport = (options: WordPressOptions, url: string, reload = false,  fetchBoth?: boolean, abortController?: AbortController): ThunkAction<void, RootState, unknown, AnyAction> => {
+export const fetchReport = (options: WordPressOptions, url: string, reload = false,  fetchBoth?: boolean, abortController?: AbortController, noRapidLoad?: boolean): ThunkAction<void, RootState, unknown, AnyAction> => {
 
     const api = new ApiService(options);
 
@@ -501,7 +503,7 @@ export const fetchReport = (options: WordPressOptions, url: string, reload = fal
            // If `fetchBoth` is true, fetch for both `mobile` and `desktop`
            const reportTypes: ReportType[] = fetchBoth ? ['mobile', 'desktop'] : [currentState.app.activeReport];
 
-          
+           
             // TODO: don't let people bam on keyboard while waiting to laod the page speed
             // if(activeReportData.loading && activeReportData.data ) {
             //     console.log('don\'t bam the mouse! we are loading your page speed details 😉');
@@ -519,13 +521,16 @@ export const fetchReport = (options: WordPressOptions, url: string, reload = fal
                 return;
             }
 
+           // console.log("coming upto this point", reportType)
+
             dispatch({ type: FETCH_REPORT_REQUEST, activeReport: reportType  });
 
             const response = await api.fetchPageSpeed(
                 url,
                 reportType,
                 reload,
-                abortController
+                abortController,
+                noRapidLoad
             );
 
             dispatch({
@@ -772,19 +777,6 @@ export const updateDiagnosticResults = (options: WordPressOptions, url: string, 
     };
 };
 
-
-// export const setDiagnosticProgress = (
-//    progress: DiagnosticProgress
-// ): ThunkAction<void, RootState, unknown, AnyAction> => {
-//     return async (dispatch: ThunkDispatch<RootState, unknown, AppAction>, getState) => {
-
-//         dispatch({
-//             type: SET_DIAGNOSTIC_PROGRESS, 
-//             payload: progress,
-//         })
-//     }
-// }
-
 export const setDiagnosticProgress = (
     progress: Partial<DiagnosticProgress>
  ): ThunkAction<void, RootState, unknown, AnyAction> => {
@@ -800,3 +792,14 @@ export const setDiagnosticProgress = (
          });
      }
  }
+
+export const updateGeneralSettings = (
+    settings: GeneralSettings
+): ThunkAction<void, RootState, unknown, AnyAction> => {
+    return (dispatch) => {
+        dispatch({
+            type: UPDATE_GENERAL_SETTINGS,
+            payload: settings
+        });
+    }
+}

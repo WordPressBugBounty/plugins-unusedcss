@@ -9,12 +9,17 @@ import {
     DialogHeader,
     DialogTitle,
 } from "components/ui/dialog";
-import { MessagesSquare } from "lucide-react";
+import { MessagesSquare, Lock } from "lucide-react";
 import { AnimatedLogo } from "components/animated-logo";
 import { cn } from 'lib/utils';
+import useCommonDispatch from 'hooks/useCommonDispatch';
+import TooltipText from "components/ui/tooltip-text";
+import Mode from 'app/page-optimizer/components/Mode';
+import ProTooltip from 'components/ProTooltip';
 
 const AIBot = ({ className }: { className: string }) => {
     const [open, setOpen] = useState(false);
+    const { licenseConnected } = useCommonDispatch()
     const [conversations, setConversations] = useState(() => {
         const saved = localStorage.getItem('chat-conversations');
         return saved ? JSON.parse(saved) : [];
@@ -92,14 +97,35 @@ const AIBot = ({ className }: { className: string }) => {
                         ))}
                     </div> */}
                     <div className="relative">
-                        <input
-                            type="text"
-                            onClick={() => (window.location.hash = '#/rapidload-ai')}
-                            placeholder="Ask about anything..."
-                            className="w-full p-2 border border-brand-200 dark:bg-brand-600/40 dark:text-brand-300 dark:border-brand-700 rounded-full focus:outline-none focus:border-black bg-brand-100 pr-10 pl-4"
-                        />
-                        <ArrowUpCircleIcon
-                            className="cursor-pointer h-10 w-10 text-brand-950 absolute right-0 top-1/2 transform -translate-y-1/2 dark:text-brand-300" />
+                        {!licenseConnected ? (
+                            <ProTooltip>
+                                <input
+                                    type="text"
+                                    disabled={!licenseConnected}
+                                    onClick={() => (window.location.hash = '#/rapidload-ai')}
+                                    placeholder="Ask about anything..."
+                                    className="w-full p-2 border cursor-pointer border-brand-200 dark:bg-brand-600/40 dark:text-brand-300 dark:border-brand-700 rounded-full focus:outline-none focus:border-black bg-brand-100 pr-10 pl-4"
+                                />
+                                <div className='absolute right-4 top-1/2 transform -translate-y-1/2 dark:text-brand-300'>
+                                    <Lock className='w-4 text-brand-400' />
+                                </div>
+                               
+                            </ProTooltip>
+                        ) : (
+                            <>
+                                <input
+                                    type="text"
+                                    disabled={!licenseConnected}
+                                    onClick={() => (window.location.hash = '#/rapidload-ai')}
+                                    placeholder="Ask about anything..."
+                                    className="w-full p-2 border border-brand-200 dark:bg-brand-600/40 dark:text-brand-300 dark:border-brand-700 rounded-full focus:outline-none focus:border-black bg-brand-100 pr-10 pl-4"
+                                />
+                                <div className='absolute right-1 top-1/2 transform -translate-y-1/2 dark:text-brand-300'>
+                                    <ArrowUpCircleIcon
+                                        className="cursor-pointer h-10 w-10 text-brand-950 absolute right-0 top-1/2 transform -translate-y-1/2 dark:text-brand-300" />
+                                </div>
+                            </>
+                        )}
                     </div>
 
 

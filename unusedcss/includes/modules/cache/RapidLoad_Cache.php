@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) or die();
+
 class RapidLoad_Cache
 {
     use RapidLoad_Utils;
@@ -21,11 +23,11 @@ class RapidLoad_Cache
 
         $cache_module_enabled = RapidLoad_Base::get_option('rapidload_module_cache');
 
-        if(isset(self::$options['uucss_disable_wp_emoji']) && self::$options['uucss_disable_wp_emoji'] == "1"){
+        if(isset(self::$options['uucss_disable_wp_emoji']) && self::$options['uucss_disable_wp_emoji'] === "1"){
             $this->disable_wp_emojis();
         }
 
-        if(!isset($cache_module_enabled) || $cache_module_enabled != "1" ){
+        if(!isset($cache_module_enabled) || $cache_module_enabled !== "1" ){
             return;
         }
 
@@ -108,14 +110,21 @@ class RapidLoad_Cache
 
         $cache_dir = dirname(RapidLoad_Cache_Store::get_cache_dir(site_url()));
 
-        if(!is_writable($cache_dir)){
+        if ( ! function_exists( 'WP_Filesystem' ) ) {
+            require_once( ABSPATH . 'wp-admin/includes/file.php' );
+        }
+        WP_Filesystem();
+        
+        global $wp_filesystem;
+
+        if(!isset($wp_filesystem) || !$wp_filesystem->is_writable($cache_dir)){
             $message = 'writing permission error for the path : ' . $cache_dir;
             $type = "error";
 
             add_action('admin_notices', function () use ($message, $type) {
-                echo "<div class=\"notice notice-$type is-dismissible rapidload-cache-notice\">
-                    <p>$message</p>
-                 </div>";
+                echo '<div class="notice notice-' . esc_attr($type) . ' is-dismissible rapidload-cache-notice">
+                    <p>' . esc_html($message) . '</p>
+                 </div>';
             });
         }
     }
@@ -616,7 +625,7 @@ class RapidLoad_Cache
             return;
         }
 
-        $title = ( is_multisite() && is_network_admin() ) ? esc_html__( 'Clear Network Cache', 'rapidload-cache' ) : esc_html__( 'Clear Site Cache', 'rapidload-cache' );
+        $title = ( is_multisite() && is_network_admin() ) ? esc_html__( 'Clear Network Cache', 'unusedcss' ) : esc_html__( 'Clear Site Cache', 'unusedcss' );
 
         $wp_admin_bar->add_menu(
             array(
@@ -640,8 +649,8 @@ class RapidLoad_Cache
                         '_action' => 'clearurl',
                     ) ), 'rapidload_cache_clear_cache_nonce' ),
                     'parent' => 'rapidload',
-                    'title'  => '<span class="ab-label">' . esc_html__( 'Clear Page Cache', 'rapidload-cache' ) . '</span>',
-                    'meta'   => array( 'title' => esc_html__( 'Clear Page Cache', 'rapidload-cache' ) ),
+                    'title'  => '<span class="ab-label">' . esc_html__( 'Clear Page Cache', 'unusedcss' ) . '</span>',
+                    'meta'   => array( 'title' => esc_html__( 'Clear Page Cache', 'unusedcss' ) ),
                 )
             );
         }
@@ -653,7 +662,7 @@ class RapidLoad_Cache
             return;
         }
 
-        if ( empty( $_GET['_wpnonce'] ) || ! wp_verify_nonce( $_GET['_wpnonce'], 'rapidload_cache_clear_cache_nonce' ) ) {
+        if ( empty( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'rapidload_cache_clear_cache_nonce' ) ) {
             return;
         }
 
@@ -663,7 +672,7 @@ class RapidLoad_Cache
 
         if ( $_GET['_action'] === 'clearurl' ) {
 
-            $url = isset($_GET['_url']) ? $_GET['_url'] : RapidLoad_Cache_Engine::$request_headers['Host'] . RapidLoad_Cache_Engine::sanitize_server_input($_SERVER['REQUEST_URI'], false);
+            $url = isset($_GET['_url']) ? sanitize_url(wp_unslash($_GET['_url'])) : RapidLoad_Cache_Engine::$request_headers['Host'] . RapidLoad_Cache_Engine::sanitize_server_input($_SERVER['REQUEST_URI'], false);
 
             self::clear_page_cache_by_url( $url );
         } elseif ( $_GET['_action'] === 'clear' ) {
@@ -697,7 +706,7 @@ class RapidLoad_Cache
 
         if(isset($state['dom']) && RapidLoad_Cache_Engine::$to_be_cached){
 
-            if(gettype($state['dom']) == "string"){
+            if(gettype($state['dom']) === "string"){
                 $content = $state['dom'];
             }else{
                 $content = $state['dom']->__toString();
@@ -720,7 +729,7 @@ class RapidLoad_Cache
 
     public static function setup_cache($status){
 
-        if($status == "1"){
+        if($status === "1"){
 
             RapidLoad_Cache_Store::create_advanced_cache_file();
             RapidLoad_Cache_Store::set_wp_cache_constant();
@@ -737,7 +746,7 @@ class RapidLoad_Cache
 
         $settings = get_option( 'rapidload_cache' );
 
-        if ( $settings === false || ! isset( $settings['version'] ) || $settings['version'] !== UUCSS_VERSION ) {
+        if ( $settings === false || ! isset( $settings['version'] ) || $settings['version'] !== RAPIDLOAD_VERSION ) {
             if ( $update ) {
                 self::update();
                 $settings = self::get_settings( false );
@@ -896,7 +905,7 @@ class RapidLoad_Cache
     private static function get_default_system_settings() {
 
         $default_system_settings = array(
-            'version'              => (string) UUCSS_VERSION,
+            'version'              => (string) RAPIDLOAD_VERSION,
             'use_trailing_slashes' => (int) ( substr( get_option( 'permalink_structure' ), -1, 1 ) === '/' ),
             'permalink_structure'  => (string) self::get_permalink_structure(), // Deprecated in 1.8.0.
         );
@@ -939,7 +948,7 @@ class RapidLoad_Cache
             'compress_cache'                     => (int) ( ! empty( $settings['compress_cache'] ) ),
             'minify_html'                        => (int) ( ! empty( $settings['minify_html'] ) ),
             'minify_inline_css_js'               => (int) ( ! empty( $settings['minify_inline_css_js'] ) ),
-            'excluded_post_ids'                  => (string) sanitize_text_field( $settings['excluded_post_ids'] ),
+            'excluded_post_ids'                  => (string) $settings['excluded_post_ids'],
             'excluded_page_paths'                => (string) self::validate_regex( $settings['excluded_page_paths'] ),
             'excluded_query_strings'             => (string) self::validate_regex( $settings['excluded_query_strings'] ),
             'excluded_cookies'                   => (string) self::validate_regex( $settings['excluded_cookies'] ),
@@ -964,7 +973,7 @@ class RapidLoad_Cache
                 return '';
             }
 
-            $validated_regex = sanitize_text_field( $regex );
+            $validated_regex = $regex;
 
             return $validated_regex;
         }
@@ -1098,10 +1107,10 @@ class RapidLoad_Cache
     public static function update_disk() {
 
         if ( is_multisite() ) {
-            if ( get_site_transient( 'rapidload_cache_disk_updated' ) !== UUCSS_VERSION ) {
+            if ( get_site_transient( 'rapidload_cache_disk_updated' ) !== RAPIDLOAD_VERSION ) {
                 self::each_site( true, 'RapidLoad_Cash_Store::clean' );
                 RapidLoad_Cache_Store::setup();
-                set_site_transient( 'rapidload_cache_disk_updated', UUCSS_VERSION, HOUR_IN_SECONDS );
+                set_site_transient( 'rapidload_cache_disk_updated', RAPIDLOAD_VERSION, HOUR_IN_SECONDS );
             }
         } else {
             RapidLoad_Cache_Store::clean();
@@ -1253,7 +1262,7 @@ class RapidLoad_Cache
 
         self::$options = RapidLoad_Base::fetch_options();
 
-        if(!isset(self::$options['uucss_enable_cache']) || self::$options['uucss_enable_cache'] != "1" ){
+        if(!isset(self::$options['uucss_enable_cache']) || self::$options['uucss_enable_cache'] !== "1" ){
             return;
         }
 
@@ -1266,7 +1275,7 @@ class RapidLoad_Cache
 
         self::$options = RapidLoad_Base::fetch_options();
 
-        if(!isset(self::$options['uucss_enable_cache']) || self::$options['uucss_enable_cache'] != "1" ){
+        if(!isset(self::$options['uucss_enable_cache']) || self::$options['uucss_enable_cache'] !== "1" ){
             return;
         }
 

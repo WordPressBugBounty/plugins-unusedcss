@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) or die();
+
 class RapidLoad_htaccess
 {
 
@@ -60,7 +62,7 @@ class RapidLoad_htaccess
 
     public static function get_htaccess_marker(){
 
-        $content = '# BEGIN RapidLoad v' . UUCSS_VERSION . PHP_EOL;
+        $content = '# BEGIN RapidLoad v' . RAPIDLOAD_VERSION . PHP_EOL;
 
         $content .= apply_filters( 'before_rapidload_htaccess_rules', '' );
 
@@ -124,66 +126,64 @@ class RapidLoad_htaccess
         return $rules;
     }
 
-    public static function get_htaccess_mod_expires() { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals
-        $rules = <<<HTACCESS
-<IfModule mod_mime.c>
-	AddType image/avif                                  avif
-    AddType image/avif-sequence                         avifs
-</IfModule>
-# Expires headers (for better cache control)
-<IfModule mod_expires.c>
-	ExpiresActive on
-	ExpiresDefault                              "access plus 1 month"
-	# cache.appcache needs re-requests in FF 3.6 (thanks Remy ~Introducing HTML5)
-	ExpiresByType text/cache-manifest           "access plus 0 seconds"
-	# Your document html
-	ExpiresByType text/html                     "access plus 0 seconds"
-	# Data
-	ExpiresByType text/xml                      "access plus 0 seconds"
-	ExpiresByType application/xml               "access plus 0 seconds"
-	ExpiresByType application/json              "access plus 0 seconds"
-	# Feed
-	ExpiresByType application/rss+xml           "access plus 1 hour"
-	ExpiresByType application/atom+xml          "access plus 1 hour"
-	# Favicon (cannot be renamed)
-	ExpiresByType image/x-icon                  "access plus 1 week"
-	# Media: images, video, audio
-	ExpiresByType image/gif                     "access plus 4 months"
-	ExpiresByType image/png                     "access plus 1 year"
-	ExpiresByType image/jpeg                    "access plus 1 year"
-	ExpiresByType image/webp                    "access plus 4 months"
-	ExpiresByType video/ogg                     "access plus 4 months"
-	ExpiresByType audio/ogg                     "access plus 4 months"
-	ExpiresByType video/mp4                     "access plus 4 months"
-	ExpiresByType video/webm                    "access plus 4 months"
-	ExpiresByType image/avif                    "access plus 4 months"
-	ExpiresByType image/avif-sequence           "access plus 4 months"
-	# HTC files  (css3pie)
-	ExpiresByType text/x-component              "access plus 1 month"
-	# Webfonts
-	ExpiresByType font/ttf                      "access plus 4 months"
-	ExpiresByType font/otf                      "access plus 4 months"
-	ExpiresByType font/woff                     "access plus 4 months"
-	ExpiresByType font/woff2                    "access plus 4 months"
-	ExpiresByType image/svg+xml                 "access plus 4 months"
-	ExpiresByType application/vnd.ms-fontobject "access plus 1 month"
-	# CSS and JavaScript
-	ExpiresByType text/css                      "access plus 1 year"
-	ExpiresByType application/javascript        "access plus 1 year"
-</IfModule>
-
-HTACCESS;
-
+    public static function get_htaccess_mod_expires() {
+        $rules = '';
+        $rules .= '<IfModule mod_mime.c>' . PHP_EOL;
+        $rules .= '    AddType image/avif                                  avif' . PHP_EOL;
+        $rules .= '    AddType image/avif-sequence                         avifs' . PHP_EOL;
+        $rules .= '</IfModule>' . PHP_EOL;
+        $rules .= '# Expires headers (for better cache control)' . PHP_EOL;
+        $rules .= '<IfModule mod_expires.c>' . PHP_EOL;
+        $rules .= '    ExpiresActive on' . PHP_EOL;
+        $rules .= '    ExpiresDefault                              "access plus 1 month"' . PHP_EOL;
+        $rules .= '    # cache.appcache needs re-requests in FF 3.6 (thanks Remy ~Introducing HTML5)' . PHP_EOL;
+        $rules .= '    ExpiresByType text/cache-manifest           "access plus 0 seconds"' . PHP_EOL;
+        $rules .= '    # Your document html' . PHP_EOL;
+        $rules .= '    ExpiresByType text/html                     "access plus 0 seconds"' . PHP_EOL;
+        $rules .= '    # Data' . PHP_EOL;
+        $rules .= '    ExpiresByType text/xml                      "access plus 0 seconds"' . PHP_EOL;
+        $rules .= '    ExpiresByType application/xml               "access plus 0 seconds"' . PHP_EOL;
+        $rules .= '    ExpiresByType application/json              "access plus 0 seconds"' . PHP_EOL;
+        $rules .= '    # Feed' . PHP_EOL;
+        $rules .= '    ExpiresByType application/rss+xml           "access plus 1 hour"' . PHP_EOL;
+        $rules .= '    ExpiresByType application/atom+xml          "access plus 1 hour"' . PHP_EOL;
+        $rules .= '    # Favicon (cannot be renamed)' . PHP_EOL;
+        $rules .= '    ExpiresByType image/x-icon                  "access plus 1 week"' . PHP_EOL;
+        $rules .= '    # Media: images, video, audio' . PHP_EOL;
+        $rules .= '    ExpiresByType image/gif                     "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType image/png                     "access plus 1 year"' . PHP_EOL;
+        $rules .= '    ExpiresByType image/jpeg                    "access plus 1 year"' . PHP_EOL;
+        $rules .= '    ExpiresByType image/webp                    "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType video/ogg                     "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType audio/ogg                     "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType video/mp4                     "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType video/webm                    "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType image/avif                    "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType image/avif-sequence           "access plus 4 months"' . PHP_EOL;
+        $rules .= '    # HTC files  (css3pie)' . PHP_EOL;
+        $rules .= '    ExpiresByType text/x-component              "access plus 1 month"' . PHP_EOL;
+        $rules .= '    # Webfonts' . PHP_EOL;
+        $rules .= '    ExpiresByType font/ttf                      "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType font/otf                      "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType font/woff                     "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType font/woff2                    "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType image/svg+xml                 "access plus 4 months"' . PHP_EOL;
+        $rules .= '    ExpiresByType application/vnd.ms-fontobject "access plus 1 month"' . PHP_EOL;
+        $rules .= '    # CSS and JavaScript' . PHP_EOL;
+        $rules .= '    ExpiresByType text/css                      "access plus 1 year"' . PHP_EOL;
+        $rules .= '    ExpiresByType application/javascript        "access plus 1 year"' . PHP_EOL;
+        $rules .= '</IfModule>' . PHP_EOL;
+    
         $rules = apply_filters( 'rapidload_htaccess_mod_expires', $rules );
-
+    
         return $rules;
-    }
+    }    
 
     public static function get_htaccess_files_match() { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals
         $rules = '<IfModule mod_alias.c>' . PHP_EOL;
         $rules .= '<FilesMatch "\.(html|htm|rtf|rtx|txt|xsd|xsl|xml)$">' . PHP_EOL;
         $rules .= '<IfModule mod_headers.c>' . PHP_EOL;
-        $rules .= 'Header set X-Powered-By "RapidLoad/' . UUCSS_VERSION . '"' . PHP_EOL;
+        $rules .= 'Header set X-Powered-By "RapidLoad/' . RAPIDLOAD_VERSION . '"' . PHP_EOL;
         $rules .= 'Header unset Pragma' . PHP_EOL;
         $rules .= 'Header append Cache-Control "public,max-age=31536000"' . PHP_EOL;
         $rules .= 'Header unset Last-Modified' . PHP_EOL;

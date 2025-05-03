@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) or die();
+
 class RapidLoad_Admin_Bar {
     use RapidLoad_Utils;
 
@@ -9,22 +11,7 @@ class RapidLoad_Admin_Bar {
         add_action( 'wp_after_admin_bar_render', [$this,'rapidload_admin_bar_css'] );
         add_action('admin_bar_menu', [$this, 'add_rapidload_admin_bar_menu'], 100);
 
-//        wp_register_script( 'rapidload-page-optimizer-data', UUCSS_PLUGIN_URL .  'includes/admin/assets/js/page-optimizer/dist/page-optimizer-data.min.js', null, 111);
-//
-//        // Localize the script with new data
-//        $script_data_array = array(
-//            'ajax_url' => admin_url( 'admin-ajax.php' ),
-//            'plugin_url' => UUCSS_PLUGIN_URL
-//        );
-//        wp_localize_script( 'rapidload-page-optimizer-data', 'rapidload', $script_data_array );
-//
-//        // Enqueued script with localized data.
-//        wp_enqueue_script( 'rapidload-page-optimizer-data' );
-//
-//        wp_enqueue_script( 'rapidload-speed-popover-js', UUCSS_PLUGIN_URL .  'includes/admin/assets/js/speed-popover/build/static/js/main.js', null, 'xx.xx', true);
-//        wp_enqueue_style( 'rapidload-speed-popover-css', UUCSS_PLUGIN_URL .  'includes/admin/assets/js/speed-popover/build/static/css/main.css', null, 'xx.xx');
-
-        $page = isset($_REQUEST['page']) ? $_REQUEST['page'] : '';
+        $page = isset($_REQUEST['page']) ? sanitize_text_field(wp_unslash($_REQUEST['page'])) : '';
 
         if (
             (!is_admin() && is_user_logged_in() && defined('RAPIDLOAD_PAGE_OPTIMIZER_ENABLED')) ||
@@ -47,7 +34,7 @@ class RapidLoad_Admin_Bar {
     {
         $options = RapidLoad_Base::fetch_options();
 
-        $page = isset($_REQUEST['page']) ? $_REQUEST['page'] : '';
+        $page = isset($_REQUEST['page']) ? sanitize_text_field(wp_unslash($_REQUEST['page'])) : '';
 
         $tag = apply_filters('rapidload/titan/tag', 'latest');
 
@@ -62,7 +49,7 @@ class RapidLoad_Admin_Bar {
         }
 
 
-        $package = UUCSS_PLUGIN_URL . $optimizer_path;
+        $package = RAPIDLOAD_PLUGIN_URL . $optimizer_path;
 
         $asset_map_file = RAPIDLOAD_PLUGIN_DIR . '/' . $optimizer_path . '/asset-map.php';
         $indexJS = '/assets/index.js';
@@ -80,17 +67,17 @@ class RapidLoad_Admin_Bar {
         $indexCSS = '/' . ltrim($indexCSS, '/');
 
         add_action('admin_head', function()use ($package ,  $indexCSS){
-            echo '<link id="rapidload-page-optimizer-css" rel="preload" href="' . $package .  $indexCSS . '" as="style" type="text/css"/>';
+            echo '<link id="rapidload-page-optimizer-css" rel="preload" href="' . esc_url($package . $indexCSS) . '" as="style" type="text/css"/>';
         });
 
-        wp_register_script( 'rapidload_page_optimizer', $package . $indexJS,[], UUCSS_VERSION);
+        wp_register_script( 'rapidload_page_optimizer', esc_url($package . $indexJS),[], RAPIDLOAD_VERSION, false);
 
-        $current_url = isset($_SERVER['REQUEST_URI']) ? home_url($_SERVER['REQUEST_URI']) : $this->get_current_url();
+        $current_url = isset($_SERVER['REQUEST_URI']) ? home_url(sanitize_url(wp_unslash($_SERVER['REQUEST_URI']))) : $this->get_current_url();
 
         if($this->is_admin_url($current_url)){
             $current_url = site_url();
             if(isset($_GET['optimize-url'])){
-                $current_url = $this->transform_url(urldecode($_GET['optimize-url']));
+                $current_url = $this->transform_url(urldecode(sanitize_url(wp_unslash($_GET['optimize-url']))));
             }
         }
 
@@ -104,15 +91,15 @@ class RapidLoad_Admin_Bar {
             'titan_stylesheet_url' => $package .  $indexCSS,
             'load_optimizer' => true,
             'page_optimizer_package_base' => $package,
-            'page_optimizer_base' => UUCSS_PLUGIN_URL .  'includes/admin/page-optimizer/dist',
-            'plugin_url' => UUCSS_PLUGIN_URL,
+            'page_optimizer_base' => RAPIDLOAD_PLUGIN_URL .  'includes/admin/page-optimizer/dist',
+            'plugin_url' => RAPIDLOAD_PLUGIN_URL,
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'admin_url' => admin_url(),
             'dashboard_url' => admin_url( 'admin.php?page=rapidload' ),
             'optimizer_url' => defined('RAPIDLOAD_OPTIMIZER_TEST_URL') ? RAPIDLOAD_OPTIMIZER_TEST_URL : $this->transform_url($current_url),
             'nonce' => self::create_nonce( 'uucss_nonce' ),
             'timezone' => get_option('timezone_string', 'UTC'),
-            'rapidload_version' => UUCSS_VERSION,
+            'rapidload_version' => RAPIDLOAD_VERSION,
             'actions' => [
                 [
                     'tooltip' => 'Clear Site Cache',
@@ -140,17 +127,16 @@ class RapidLoad_Admin_Bar {
                     'icon' => 'clear_optimization'
                 ]
             ],
-            'api_root' => defined('UUCSS_API_URL') ? UUCSS_API_URL : 'https://api.rapidload.io/api/v1',
+            'api_root' => defined('RAPIDLOAD_API_URL') ? RAPIDLOAD_API_URL : 'https://api.rapidload.io/api/v1',
             'enable_entire_site' => RapidLoad_DB::get_optimization_count() < 2,
             'rest_url' => RapidLoadRestApi::rest_url(),
             'license_key' => RapidLoad_Base::get_license_key(),
-            'test_mode' => boolval(isset($options['rapidload_test_mode']) && $options['rapidload_test_mode'] == "1"),
-            'uucss_disable_error_tracking' => boolval(isset($options['uucss_disable_error_tracking']) && $options['uucss_disable_error_tracking'] == "1"),
-            'test_mode' => boolval(isset($options['rapidload_test_mode']) && $options['rapidload_test_mode'] == "1"),
-            'rapidload_titan_gear' => get_option('rapidload_titan_gear', 'trurboMax'),
+            'test_mode' => boolval(isset($options['rapidload_test_mode']) && $options['rapidload_test_mode'] === "1"),
+            'uucss_disable_error_tracking' => boolval(isset($options['uucss_disable_error_tracking']) && $options['uucss_disable_error_tracking'] === "1"),
+            'rapidload_titan_gear' => get_option('rapidload_titan_gear', 'turboMax'),
             'rapidload_license_data' => $rapidload_license_data,
             'rapidload_privacy_policy_accepted' => get_option('rapidload_privacy_policy_accepted', false),
-            'db_to_be_updated' => RapidLoad_DB::$current_version != RapidLoad_DB::$db_version,
+            'db_to_be_updated' => RapidLoad_DB::$current_version !== RapidLoad_DB::$db_version,
         );
 
         wp_localize_script( 'rapidload_page_optimizer', 'rapidload_optimizer', $data );
@@ -237,19 +223,19 @@ class RapidLoad_Admin_Bar {
 
                 $wp_admin_bar->add_node(array(
                     'id'    => 'rapidload',
-                    'title' => '<div id="rl-node-wrapper" class="'. ( isset($options['rapidload_test_mode']) && $options['rapidload_test_mode'] == "1" ? 'rl-node-wrapper rl-test-mode-on' : 'rl-node-wrapper') .'" >
+                    'title' => '<div id="rl-node-wrapper" class="'. ( isset($options['rapidload_test_mode']) && $options['rapidload_test_mode'] === "1" ? 'rl-node-wrapper rl-test-mode-on' : 'rl-node-wrapper') .'" >
                                     <span class="rl-icon">
-                                        <img src="'. UUCSS_PLUGIN_URL .'/assets/images/logo-icon-light.svg" alt="" style="max-width: 100%">
+                                        <img src="'. esc_url(RAPIDLOAD_PLUGIN_URL . '/assets/images/logo-icon-light.svg') .'" alt="" style="max-width: 100%">
                                     </span>
-                                    <span class="rl-label">'.__( 'RapidLoad', 'rapidload' ) . '</span>
-                                    '. ( isset($options['rapidload_test_mode']) && $options['rapidload_test_mode'] == "1" ? ' <span class="rl-input-wrapper-test-mode"><span class="rl-input-test-mode">Test Mode</span></span>' : '' ) . '</div>',
+                                    <span class="rl-label">'.__( 'RapidLoad', 'unusedcss' ) . '</span>
+                                    '. ( isset($options['rapidload_test_mode']) && $options['rapidload_test_mode'] === "1" ? ' <span class="rl-input-wrapper-test-mode"><span class="rl-input-test-mode">Test Mode</span></span>' : '' ) . '</div>',
                     'href'  => admin_url( 'admin.php?page=rapidload' ),
                     'meta'  => array( 'class' => '' ),
                 ));
 
                 $wp_admin_bar->add_node( array(
                     'id'    => 'rapidload-clear-cache',
-                    'title' => '<span class="ab-label">' . __( 'Clear CSS/JS/Font Optimizations', 'clear_optimization' ) . '</span>',
+                    'title' => '<span class="ab-label">' . __( 'Clear CSS/JS/Font Optimizations', 'unusedcss' ) . '</span>',
                     //'href'  => admin_url( 'admin.php?page=rapidload&action=rapidload_purge_all' ),
                     'href'   => wp_nonce_url( add_query_arg( array(
                         'action' => 'rapidload_purge_all',
@@ -267,7 +253,7 @@ class RapidLoad_Admin_Bar {
     }
 
     function is_admin_url($url){
-        $_url = parse_url(untrailingslashit(admin_url()));
+        $_url = wp_parse_url(untrailingslashit(admin_url()));
         if(isset($_url['path']) && $this->str_contains($url, $_url['path'])){
             return true;
         }

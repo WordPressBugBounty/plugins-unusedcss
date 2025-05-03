@@ -8,22 +8,25 @@ import { updateLicense } from "../../../store/app/appActions";
 import { useAppContext } from "../../../context/app";
 import useCommonDispatch from "hooks/useCommonDispatch";
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader } from "lucide-react";
+import { Loader, PlugIcon } from "lucide-react";
+import { Button } from 'components/ui/button';
+import AppButton from 'components/ui/app-button';
+import { setCommonRootState } from '../../../store/common/commonActions';
+import ApiService from "../../../services/api";
 
 type InputChangeHandler = React.ChangeEventHandler<HTMLInputElement>;
 
 const LicenseWidget = () => {
     const [isVisible, setIsVisible] = useState(true);
-
     const [licenseMessage, setLicenseMessage] = useState("");
     const { license } = useSelector(optimizerData);
-    const { options } = useAppContext();
+    const { options, uucssGlobal } = useAppContext();
 
     const [licenseInfo, setLicenseInfo] = useState<License | null>(() => options.rapidload_license_data || null);
     const [inputLicense, setInputLicense] = useState("");
     const [showInput, setShowInput] = useState(false);
     const [loading, setLoading] = useState(false);
-   
+
     const { dispatch } = useCommonDispatch();
 
 
@@ -40,29 +43,33 @@ const LicenseWidget = () => {
 
         if (response.success) {
             dispatch(updateLicense(options));
-            setTimeout(() => (window.location.hash = '#/'), 300);
+            dispatch(setCommonRootState('licenseConnected', true));
+            localStorage.setItem('rapidLoadLicense', JSON.stringify(response.data));
         } else {
             setLicenseMessage(response.error || '');
+            localStorage.removeItem('rapidLoadLicense');
         }
     };
 
     useEffect(() => {
-        if (license && !licenseInfo) {
+        if (license) {
             setLicenseInfo(license);
         }
     }, [license]);
+
+  
 
     const toggleVisibility = () => setIsVisible(!isVisible);
 
     const renderLicenseStatus = () => {
         const isActivated = !!licenseInfo;
         const Icon = isActivated ? CheckBadgeIcon : XCircleIcon;
-        const textColor = isActivated ? "text-purple-900/90  dark:text-brand-300" : "text-red-600  dark:text-brand-300";
-        const bgColor = isActivated ? "text-purple-900/80 dark:text-brand-300" : "text-red-600  dark:text-brand-300";
-        const statusText = isActivated ? "Rapidload Activated" : "Rapidload Deactivated";
+        const textColor = isActivated ? "text-purple-900/90  dark:text-brand-300" : "text-purple-600  dark:text-brand-300";
+        const bgColor = isActivated ? "text-purple-900/80 dark:text-brand-300" : "text-purple-600  dark:text-brand-300";
+        const statusText = isActivated ? "Rapidload Activated" : "You are using RapidLoad AI FREE";
 
         return (
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-1 items-center">
                 <Icon className={`h-4 w-4 ${bgColor}`} />
                 <span className={`text-xs ${textColor}`}>{statusText}</span>
             </div>
@@ -73,30 +80,16 @@ const LicenseWidget = () => {
         { label: 'Email', value: licenseInfo?.email },
         {
             label: 'Next Billing',
-            value: licenseInfo?.next_billing
+            value: licenseInfo?.plan === 'cancelled or not found' ? 'Expired' : licenseInfo?.next_billing
                 ? new Date(licenseInfo.next_billing * 1000).toLocaleDateString()
                 : ''
         },
         { label: 'Plan', value: licenseInfo?.plan },
-        { label: 'Active Domain', value: licenseInfo?.licensedDomain? licenseInfo?.licensedDomain : options.optimizer_url}
+        { label: 'Active Domain', value: licenseInfo?.licensedDomain ? licenseInfo?.licensedDomain : options.optimizer_url }
     ];
 
     const renderLicenseDetails = () => (
         <div className="relative space-y-3">
-            {/* <button 
-                onClick={toggleVisibility}
-                className="absolute right-0 -top-4 p-1.5 rounded-full transition-colors"
-                aria-label={isVisible ? "Hide details" : "Show details"}
-            >
-                {isVisible ? (
-                    <EyeIcon className="h-4 w-4 text-violet-400" />
-                ) : (
-                    <EyeSlashIcon className="h-4 w-4 text-violet-400" />
-                )}
-            </button> */}
-
-           
-
             {licenseFields.map(({ label, value }, index) => (
                 <div
                     key={label}
@@ -119,10 +112,10 @@ const LicenseWidget = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="relative"
+            className="relative pt-2"
         >
             {licenseMessage && (
-                <h3 className="text-sm font-medium text-amber-700 absolute -top-6 right-0">{licenseMessage}</h3>
+                <h3 className="text-sm font-medium text-amber-700 absolute -top-4 right-0 dark:text-brand-300">{licenseMessage}</h3>
             )}
             <Input
                 id="licenseKey"
@@ -136,73 +129,61 @@ const LicenseWidget = () => {
         </motion.div>
     );
 
-    const renderConnectButton = () => (
-        <button
-            className="flex gap-2 items-center cursor-pointer bg-brand-100/90 text-brand-950 px-4 rounded-lg"
-            onClick={() => (showInput ? connectRapidloadLicense() : window.open('https://app.rapidload.io/', '_blank'))}
-        >
-            {loading && <Loader className='w-4 animate-spin' />} Connect
-        </button>
-    );
+    const deactivateLicense = async () => {
+        setLoading(true);
+        const response = await dispatch(updateLicense(options, {disconnect: true}));
+            if (response.success) {
+                dispatch(updateLicense(options));
+                setLicenseInfo(null);
+                dispatch(setCommonRootState('licenseConnected', false));
+            }
+        setLoading(false);
+    };
 
     return (
         <AnimatePresence mode="wait">
             <div className="w-full flex flex-col gap-4">
                 <Card data-tour="license-widget" className="border flex flex-col gap-4">
-               
+
                     <div className="flex flex-col p-6 pb-0 gap-2">
                         <div className="text-lg font-bold">
                             {licenseInfo ? (
                                 <span className="text-brand-400/50 dark:text-brand-300/80">Welcome back, <span className="text-brand-950 dark:text-brand-300">{licenseInfo?.name}</span></span>
                             ) : (
-                                <span className="text-brand-400/90 dark:text-brand-300">Connect your license</span>
+                                <span className="text-base font-semibold dark:text-brand-300">Connect your license</span>
                             )}
                         </div>
                         <div className="bg-purple-800/10 px-2.5 py-1.5 rounded-xl w-fit dark:bg-brand-800 dark:border-brand-600 dark:border">{renderLicenseStatus()}</div>
                     </div>
 
                     <div className="grid gap-4 px-8 text-sm relative">
-                        {/* Stored License:
-                        {JSON.stringify(parsedStoredLicense?.licensedDomain)}
-                        <div className="h-1 bg-brand-950 border-b border-brand-950 border-2" />
-                        License Info:
-                        {JSON.stringify(licenseInfo?.licensedDomain)} */}
+                        
+                        {/* !licenseInfo */}
                         {!licenseInfo ? (
                             <>
-                                <span>Slow load times are the #1 reason for high bounce rates and one of the root causes of poor Google Rankings.</span>
-                                {showInput ? renderLicenseInput() : (
-                                    <motion.div
-                                        key="getRapidloadButton"
-                                        initial={{ opacity: 0, y: -20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -20 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="flex flex-col items-center"
-                                    >
-                                        <button
-                                            className="text-sm font-semibold cursor-pointer bg-brand-100/90 text-brand-950 py-1.5 px-4 rounded-lg"
-                                            onClick={() => window.open('https://rapidload.io/', 'blank')}
-                                        >
-                                            Get Rapidload
-                                        </button>
-                                    </motion.div>
+                               
+                                <span>You're currently using just 30% of RapidLoad AI’s potential. While the free version speeds up your site, the real power unlocks at 100%—with advanced optimizations like CriticalCSS injection, real-time image compression, and a high-speed global CDN.</span>
+                                {showInput && renderLicenseInput()}
 
-                                )}
                             </>
                         ) : renderLicenseDetails()}
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    
                         <div
-                            className="flex gap-6 justify-end p-6 text-sm font-semibold relative before:absolute before:left-0 before:right-0 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-white before:via-brand-200 before:to-white dark:before:bg-gradient-to-r dark:before:from-brand-800 dark:before:via-brand-900 dark:before:to-brand-800">
+                            className="px-6 py-6 text-sm font-semibold relative before:absolute before:left-0 before:right-0 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-white before:via-brand-200 before:to-white dark:before:bg-gradient-to-r dark:before:from-brand-800 dark:before:via-brand-900 dark:before:to-brand-800">
+                            {/* licenseInfo */}
                             {licenseInfo ? (
-                                <>
+                                <div className='flex gap-2 justify-end '>
                                     <button className="cursor-pointer text-brand-500 py-1.5" onClick={() => window.open('https://app.rapidload.io/', 'blank')}>View My Account</button>
                                     <button className="cursor-pointer bg-brand-100/90 text-brand-950 py-1.5 px-4 rounded-lg dark:text-brand-300 dark:bg-brand-800 dark:border-brand-600 dark:border dark:hover:bg-brand-600/40 transition-all" onClick={() => window.open('https://app.rapidload.io/subscription', 'blank')}>Upgrade</button>
-                                </>
+                                    <button className="cursor-pointer flex gap-2 items-center bg-brand-100/90 text-brand-950 py-1.5 px-4 rounded-lg dark:text-brand-300 dark:bg-brand-800 dark:border-brand-600 dark:border dark:hover:bg-brand-600/40 transition-all" onClick={() => deactivateLicense()}>
+                                        {loading && <Loader className='w-4 animate-spin' />} Deactivate
+                                    </button>
+
+                                </div>
                             ) : (
-                                <>
-                                    {/*<button className="cursor-pointer text-brand-500 py-1.5" onClick={() => setShowInput(!showInput)}>{showInput ? "Cancel" : "Connect with License key"}</button>*/}
+                                <div className='flex gap-4 justify-end '>
                                     <button
                                         className="cursor-pointer text-brand-500 py-1.5"
                                         onClick={() => setShowInput(!showInput)}
@@ -218,11 +199,18 @@ const LicenseWidget = () => {
                                             {showInput ? "Cancel" : "Connect with License key"}
                                         </motion.span>
                                     </button>
-                                    {renderConnectButton()}
-                                </>
+
+                                    <AppButton
+                                        className={`bg-[#09090b] flex gap-2 items-center dark:bg-brand-800 dark:border-brand-600 dark:border dark:hover:bg-brand-600/40 dark:text-brand-300 cursor-pointer px-4 rounded-lg ${showInput && inputLicense.length <= 0 ? "cursor-not-allowed pointer-events-none opacity-50" : ""}`}
+                                        onClick={() => (showInput ? connectRapidloadLicense() : uucssGlobal?.activation_url ? window.location.href = uucssGlobal?.activation_url
+                                            : window.open('https://rapidload.ai/', '_blank'))}
+                                    >
+                                        {loading ? <Loader className='w-4 animate-spin' /> : <PlugIcon className="w-4 h-4" />} Connect to Boost
+                                    </AppButton>
+                                </div>
                             )}
                         </div>
-                    </div>
+                   
                 </Card>
             </div>
         </AnimatePresence>

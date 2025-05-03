@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) or die();
+
 class RapidLoad_HTML_Minifier
 {
     use RapidLoad_Utils;
@@ -10,7 +12,7 @@ class RapidLoad_HTML_Minifier
     {
         $this->options = RapidLoad_Base::get_merged_options();
 
-        if(!isset($this->options['rapidload_minify_html']) || $this->options['rapidload_minify_html'] != "1"){
+        if(!isset($this->options['rapidload_minify_html']) || $this->options['rapidload_minify_html'] !== "1"){
             return;
         }
 

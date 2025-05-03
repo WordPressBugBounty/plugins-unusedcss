@@ -73,6 +73,8 @@ class RapidLoad_Base
 
             RapidLoad_DB::update_db_version();
 
+
+
             if (isset($_REQUEST['rapidload_preview'])) {
                 add_filter('determine_current_user', function (){
                     return 0;
@@ -102,7 +104,7 @@ class RapidLoad_Base
 
             RapidLoad_ThirdParty::initialize();
 
-            register_deactivation_hook( UUCSS_PLUGIN_FILE, [ $this, 'vanish' ] );
+            register_deactivation_hook( RAPIDLOAD_PLUGIN_FILE, [ $this, 'vanish' ] );
 
             add_filter('uucss/cache-base-dir', function ($dir){
 
@@ -126,7 +128,7 @@ class RapidLoad_Base
 
             add_filter('plugin_row_meta',[$this, 'add_plugin_row_meta_links'],10,4);
 
-            add_filter( 'plugin_action_links_' . plugin_basename( UUCSS_PLUGIN_FILE ), [
+            add_filter( 'plugin_action_links_' . plugin_basename( RAPIDLOAD_PLUGIN_FILE ), [
                 $this,
                 'add_plugin_action_link'
             ] );
@@ -139,7 +141,6 @@ class RapidLoad_Base
 
                 self::enqueueGlobalScript();
 
-                //add_action( 'admin_notices', [ $this, 'rapidload_display_global_notification' ] );
             }
 
             $this->container['feedback'] = new RapidLoad_Feedback();
@@ -160,13 +161,11 @@ class RapidLoad_Base
     }
 
     public function enqueue_diagnose_script(){
-        
-        $diagnose_script_file = plugin_dir_path(UUCSS_PLUGIN_FILE) . 'assets/js/rapidload-diagnose-script.js';
 
-        if (defined('RAPIDLOAD_DEV_MODE') && RAPIDLOAD_DEV_MODE && file_exists($diagnose_script_file)) {
-            $diagnose_script_content = file_get_contents($diagnose_script_file);
+        if (defined('RAPIDLOAD_DEV_MODE') && RAPIDLOAD_DEV_MODE) {
+            $diagnose_script_content = file_get_contents(plugin_dir_path(RAPIDLOAD_PLUGIN_FILE) . 'assets/js/rapidload-diagnose-script.js');
         } else {
-            $diagnose_script_content = '(function(){window.diagnose_data={cache:{status:false,key:"uucss_enable_cache",name:"Page Cache"},cpcss:{status:false,key:"uucss_enable_cpcss",name:"Critical CSS"},uucss:{non_optimized_css:[],key:"uucss_enable_uucss",name:"Remove Unused CSS"},css_minify:{non_minified_css:[],key:"uucss_minify",name:"Minify CSS"},js_minify:{non_minified_js:[],key:"minify_js",name:"Minify Javascript"},js_defer:{non_deferred_js:[],key:"uucss_load_js_method",name:"Defer Javascript"},js_delay:{non_delayed_js:[],key:"delay_javascript",name:"Delay Javascript"},cdn:{status:false,key:"uucss_enable_cdn",name:"RapidLoad CDN"},images:{optimized_images:[],redirected_images:[],non_handled_images:[],key:"uucss_support_next_gen_formats",name:"Serve next-gen Images (AVIF, WEBP)"}};function is_rapidload_preview(){const urlParams=new URLSearchParams(window.location.search);const params=[];urlParams.forEach(((value,key)=>{params.push(key)}));return params.includes("rapidload_preview")}document.addEventListener("DOMContentLoaded",(function(){if(is_rapidload_preview()){const rapidload_cache_status_div_content=document.querySelector("#rapidload-cache-status");if(rapidload_cache_status_div_content){window.diagnose_data.cache.status=true}else{window.diagnose_data.cache.status=false}const rapidload_cpcss_style_content=document.querySelector("#rapidload-critical-css");if(rapidload_cpcss_style_content){window.diagnose_data.cpcss.status=true}else{window.diagnose_data.cpcss.status=false}const allStylesheets=document.querySelectorAll("link[type=\'text/css\']");const nonOptimizedStylesheets=Array.from(allStylesheets).filter((sheet=>!sheet.hasAttribute("data-rpd-uucss")));if(nonOptimizedStylesheets.length>0){window.diagnose_data.uucss.non_optimized_css=nonOptimizedStylesheets.map((sheet=>sheet.href))}else{window.diagnose_data.uucss.non_optimized_css=[]}const nonMinifiedStylesheets=Array.from(allStylesheets).filter((sheet=>{const href=sheet.href||"";return!sheet.hasAttribute("data-rpd-minify")&&!href.toString().includes(".min.css")}));if(nonMinifiedStylesheets.length>0){window.diagnose_data.css_minify.non_minified_css=nonMinifiedStylesheets.map((sheet=>sheet.href))}else{window.diagnose_data.css_minify.non_minified_css=[]}const allScripts=document.querySelectorAll("script[src]");const nonMinifiedScripts=Array.from(allScripts).filter((script=>{const src=script.src||"";return!script.hasAttribute("data-rpd-minify-js")&&!src.toString().includes(".min.js")}));if(nonMinifiedScripts.length>0){window.diagnose_data.js_minify.non_minified_js=nonMinifiedScripts.map((script=>script.src))}else{window.diagnose_data.js_minify.non_minified_js=[]}const nonDeferredScripts=Array.from(allScripts).filter((script=>!script.hasAttribute("data-rpd-strategy")&&!script.hasAttribute("defer")));if(nonDeferredScripts.length>0){window.diagnose_data.js_defer.non_deferred_js=nonDeferredScripts.map((script=>script.src))}else{window.diagnose_data.js_defer.non_deferred_js=[]}const nonDelayedScripts=Array.from(allScripts).filter((script=>!script.hasAttribute("data-rpd-strategy")||script.getAttribute("data-rpd-strategy")!=="delay"));if(nonDelayedScripts.length>0){window.diagnose_data.js_delay.non_delayed_js=nonDelayedScripts.map((script=>script.src))}else{window.diagnose_data.js_delay.non_delayed_js=[]}const preconnectLink=document.querySelector("link[rel=\'preconnect\'][crossorigin][href*=\'.rapidload-cdn.io\']");if(preconnectLink){window.diagnose_data.cdn.status=true}else{window.diagnose_data.cdn.status=false}const imageObserver=new PerformanceObserver((list=>{list.getEntries().forEach((entry=>{console.log(entry.name);if(entry.initiatorType==="img"){processImage(entry.name.toString())}else if(entry.initiatorType==="css"&&entry.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)){processImage(entry.name.toString())}}))}));imageObserver.observe({entryTypes:["resource"]});function processImage(img){const imageUrl=img;if(window.diagnose_data.images.non_handled_images.includes(imageUrl)||window.diagnose_data.images.optimized_images.includes(imageUrl)){return}if(!imageUrl.includes("images.rapidload-cdn.io")){if(!window.diagnose_data.images.non_handled_images.includes(imageUrl)){window.diagnose_data.images.non_handled_images.push(imageUrl)}}else{if(!window.diagnose_data.images.optimized_images.includes(imageUrl)){window.diagnose_data.images.optimized_images.push(imageUrl)}}}}setTimeout((()=>{if(window.diagnose_data.images.optimized_images.length>0){fetch(rapidload_diagnose_tool.ajaxurl,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({action:"rapidload_image_optimization_status",image_urls:JSON.stringify(window.diagnose_data.images.optimized_images),_ajax_nonce:rapidload_diagnose_tool.nonce})}).then((response=>response.json())).then((response=>{if(response.success&&response.data){response.data.forEach((image=>{if(image.redirected&&image.status===307){const index=window.diagnose_data.images.optimized_images.indexOf(image.url);if(index>-1){window.diagnose_data.images.optimized_images.splice(index,1);window.diagnose_data.images.redirected_images.push(image.url)}}}))}})).finally((()=>{window.parent.postMessage({type:"RAPIDLOAD_CHECK_RESULTS",data:diagnose_data},"*")}))}else{window.parent.postMessage({type:"RAPIDLOAD_CHECK_RESULTS",data:diagnose_data},"*")}}),5e3)}))})();';
+            $diagnose_script_content = file_get_contents(plugin_dir_path(RAPIDLOAD_PLUGIN_FILE) . 'assets/js/rapidload-diagnose-script.min.js');
         }
 
         add_action('wp_enqueue_scripts', function() use ($diagnose_script_content) {
@@ -201,7 +200,7 @@ class RapidLoad_Base
 
         $this->url = $this->transform_url($this->url);
 
-        if(RapidLoad_DB::$current_version != RapidLoad_DB::$db_version){
+        if(RapidLoad_DB::$current_version !== RapidLoad_DB::$db_version){
             return $option;
         }
 
@@ -211,7 +210,7 @@ class RapidLoad_Base
 
             $strategy = $this->is_mobile() ? 'mobile' : 'desktop';
 
-            if($strategy == "mobile"){
+            if($strategy === "mobile"){
                 $page_options = RapidLoad_Enqueue::$job->get_mobile_options(true);
             }else{
                 $page_options = RapidLoad_Enqueue::$job->get_desktop_options(true);
@@ -225,77 +224,6 @@ class RapidLoad_Base
 
         return $option;
     }
-
-    function rapidload_display_global_notification() {
-
-        if ( class_exists('PAnD') && ! PAnD::is_admin_notice_active( 'rapidload-new-major-release-banner-forever' ) ) {
-            return;
-        }
-
-        ?>
-        <div class="rapidload-notification notice notice-success is-dismissible" data-dismissible="rapidload-new-major-release-banner-forever">
-
-            <div class="column-40"></div>
-            <div class="column-60">
-
-            <div class="heading-col pl-6 pr-6 mt-3">
-                 <div class="column-header-10">
-                     <svg width="57" height="50" viewBox="0 0 57 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                         <path fill-rule="evenodd" clip-rule="evenodd" d="M25.3281 49.9995C38.6189 49.2553 48.8718 38.0916 48.1123 25.0673C47.9857 22.9586 47.606 20.9739 46.9731 18.9893L46.5934 19.2373C47.2263 21.222 47.606 23.3307 47.606 25.4394C47.606 36.8512 38.1126 46.0302 26.4673 46.0302C26.0876 46.0302 25.7079 46.0302 25.3281 46.0302V49.9995Z" fill="#B59CD3"/>
-                         <path fill-rule="evenodd" clip-rule="evenodd" d="M4.18945 39.7045C8.49313 45.9065 15.5815 49.7518 23.1763 49.9999V45.7825C17.2271 44.7902 12.1639 42.1853 8.87287 37.0996L4.18945 39.7045Z" fill="#A080C6"/>
-                         <path fill-rule="evenodd" clip-rule="evenodd" d="M2.03651 15.7646C-1.00138 22.959 -0.621642 31.0217 3.04914 37.844L7.85914 35.1151C5.45414 30.0294 5.58072 24.1994 8.23887 19.2378L2.03651 15.7646Z" fill="#9572C0"/>
-                         <path fill-rule="evenodd" clip-rule="evenodd" d="M23.1745 0.259766C14.5671 1.25209 6.9724 6.33778 2.92188 13.7802L9.25081 17.3774C12.4153 12.7879 17.4784 9.93497 23.0479 9.56285V0.259766H23.1745Z" fill="#8B64B9"/>
-                         <path fill-rule="evenodd" clip-rule="evenodd" d="M47.0981 10.1827C41.9084 3.60851 33.8073 -0.236768 25.4531 0.0113147V9.43844C30.01 9.68652 34.1871 11.4231 37.4781 14.5241L47.0981 10.1827Z" fill="#7F54B3"/>
-                         <path fill-rule="evenodd" clip-rule="evenodd" d="M24.316 22.7107C26.721 22.7107 28.7463 24.5713 28.7463 27.0521C28.7463 29.4089 26.8476 31.3936 24.316 31.3936C21.911 31.3936 19.8857 29.533 19.8857 27.0521C19.8857 24.6954 21.911 22.7107 24.316 22.7107Z" fill="#51555F"/>
-                         <path fill-rule="evenodd" clip-rule="evenodd" d="M52.1634 11.4229L38.9993 20.2298L25.8351 28.9126L24.6958 26.928L23.5566 24.9433L37.86 18.2451L52.1634 11.4229Z" fill="#51555F"/>
-                         <path fill-rule="evenodd" clip-rule="evenodd" d="M56.5923 9.06623L52.9215 12.7875H52.7949L52.6684 12.6634C52.5418 12.1673 52.4152 11.6711 52.162 11.299C51.9089 10.9268 51.6557 10.5547 51.276 10.1826C51.1494 10.1826 51.1494 10.0586 51.1494 9.93452C51.1494 9.93452 51.1494 9.93452 51.276 9.81048L56.4657 8.57007C56.5923 8.57007 56.5923 8.57007 56.5923 8.69411C56.7189 8.94219 56.7189 9.06623 56.5923 9.06623Z" fill="#7F54B3"/>
-                     </svg>
-                 </div>
-                 <div class="column-header-90">
-                     <div class="top-header">
-                         Heads up, New RapidLoad comes in as ALL-IN-ONE solution for<br> page-speed optimization.
-                         <h2 class="mb-1 text-xsm text-tips-dark-green-font font-semibold">RapidLoad 2.0 is getting back into the game with a new kit and it is loaded with exciting features:</h2>
-                     </div>
-
-                     <div class="tips-slide">
-                         <ul class="rapidload-icon-list-items">
-                             <li class="icon-list-item">
-                                 <span class="list-text">Unused CSS + Critical CSS</span>
-                             </li>
-                             <li class="icon-list-item">
-                                 <span class="list-text">On-the-fly Image Optimization</span>
-                             </li>
-                             <li class="icon-list-item">
-                                 <span class="list-text">Font Optimization</span>
-                             </li>
-                             <li class="icon-list-item">
-                                 <span class="list-text">JS Optimization</span>
-                             </li>
-                             <li class="icon-list-item">
-                                 <span class="list-text">Page Cache</span>
-                             </li>
-
-                         </ul>
-                     </div>
-                 </div>
-
-            </div>
-            <div class="content pl-6 pr-6 pt-1 min-h-[76px] flex">
-
-            </div>
-            <div class="action-footer">
-                <div class="notify-buttons">
-                    <a href="<?php echo admin_url( 'admin.php?page=rapidload' )?>">
-                        <button class="update-now"> Dashboard</button>
-                    </a>
-
-                </div>
-            </div>
-            </div>
-        </div>
-        <?php
-    }
-
 
     public function add_plugin_action_link( $links ) {
 
@@ -311,25 +239,6 @@ class RapidLoad_Base
         if(self::is_api_key_verified()) {
             return true;
         }else {
-
-            $url = $this->get_current_url();
-
-            if(strpos($url, 'page=uucss_legacy') !== false || strpos($url, 'page=rapidload') !== false){
-                return false;
-            }
-
-            $notice = [
-                'action'  => 'on-board',
-                'title'   => 'RapidLoad Power Up',
-                'message' => 'Complete on-boarding steps, it only takes 2 minutes.',
-
-                'main_action' => [
-                    'key'   => 'Get Started',
-                    'value' => admin_url( 'options-general.php?page=rapidload' )
-                ],
-                'type'        => 'warning'
-            ];
-            self::add_advanced_admin_notice($notice);
             self::display_get_start_link();
         }
 
@@ -344,17 +253,17 @@ class RapidLoad_Base
 
         $file_system = self::get_log_instance();
 
-        if ( $file_system->exists( UUCSS_LOG_DIR ) ) {
+        if ( $file_system->exists( RAPIDLOAD_LOG_DIR ) ) {
             return true;
         }
 
-        if( $file_system->is_writable( UUCSS_LOG_DIR ) ){
+        if( $file_system->is_writable( RAPIDLOAD_LOG_DIR ) ){
             return false;
         }
 
-        $created = $file_system->mkdir( UUCSS_LOG_DIR , 0755, !$file_system->exists( wp_get_upload_dir()['basedir'] . '/rapidload/' ));
+        $created = $file_system->mkdir( RAPIDLOAD_LOG_DIR , 0755, !$file_system->exists( wp_get_upload_dir()['basedir'] . '/rapidload/' ));
 
-        if (!$created || ! $file_system->is_writable( UUCSS_LOG_DIR ) || ! $file_system->is_readable( UUCSS_LOG_DIR ) ) {
+        if (!$created || ! $file_system->is_writable( RAPIDLOAD_LOG_DIR ) || ! $file_system->is_readable( RAPIDLOAD_LOG_DIR ) ) {
             return false;
         }
 
@@ -379,21 +288,27 @@ class RapidLoad_Base
                 }
             }
 
-            wp_enqueue_script( 'popper', UUCSS_PLUGIN_URL . 'assets/libs/tippy/popper.min.js', array( 'jquery' ) );
-            wp_enqueue_script( 'noty', UUCSS_PLUGIN_URL . 'assets/libs/noty/noty.js', array( 'jquery' ) );
-            wp_enqueue_script( 'tippy', UUCSS_PLUGIN_URL . 'assets/libs/tippy/tippy-bundle.umd.min.js', array( 'jquery' ) );
-            wp_enqueue_style( 'tippy', UUCSS_PLUGIN_URL . 'assets/libs/tippy/tippy.css' );
-            wp_enqueue_style( 'noty', UUCSS_PLUGIN_URL . 'assets/libs/noty/noty.css' );
-            wp_enqueue_style( 'noty-animate', UUCSS_PLUGIN_URL . 'assets/libs/noty/animate.css' );
-            wp_enqueue_style( 'noty-theme', UUCSS_PLUGIN_URL . 'assets/libs/noty/themes/mint.css' );
-            wp_enqueue_style( 'featherlight', UUCSS_PLUGIN_URL . 'assets/libs/popup/featherlight.css' );
-            wp_enqueue_script( 'featherlight', UUCSS_PLUGIN_URL . 'assets/libs/popup/featherlight.js' , array( 'jquery' ) );
+            wp_enqueue_script( 'popper', RAPIDLOAD_PLUGIN_URL . 'assets/libs/tippy/popper.min.js', array( 'jquery' ) );
+            wp_enqueue_script( 'noty', RAPIDLOAD_PLUGIN_URL . 'assets/libs/noty/noty.js', array( 'jquery' ) );
+            wp_enqueue_script( 'tippy', RAPIDLOAD_PLUGIN_URL . 'assets/libs/tippy/tippy-bundle.umd.min.js', array( 'jquery' ) );
+            wp_enqueue_style( 'tippy', RAPIDLOAD_PLUGIN_URL . 'assets/libs/tippy/tippy.css' );
+            wp_enqueue_style( 'noty', RAPIDLOAD_PLUGIN_URL . 'assets/libs/noty/noty.css' );
+            wp_enqueue_style( 'noty-animate', RAPIDLOAD_PLUGIN_URL . 'assets/libs/noty/animate.css' );
+            wp_enqueue_style( 'noty-theme', RAPIDLOAD_PLUGIN_URL . 'assets/libs/noty/themes/mint.css' );
+            wp_enqueue_style( 'featherlight', RAPIDLOAD_PLUGIN_URL . 'assets/libs/popup/featherlight.css' );
+            wp_enqueue_script( 'featherlight', RAPIDLOAD_PLUGIN_URL . 'assets/libs/popup/featherlight.js' , array( 'jquery' ) );
 
-            wp_register_script( 'uucss_global_admin_script', UUCSS_PLUGIN_URL . 'assets/js/uucss_global.js', [ 'jquery', 'wp-util' ], UUCSS_VERSION );
+            $rapidload_license_data = get_option('rapidload_license_data', null);   
+
+            if($rapidload_license_data){
+                $rapidload_license_data = unserialize($rapidload_license_data);
+            }
+
+            wp_register_script( 'uucss_global_admin_script', RAPIDLOAD_PLUGIN_URL . 'assets/js/uucss_global.js', [ 'jquery', 'wp-util' ], RAPIDLOAD_VERSION );
             $data = array(
                 'ajax_url'          => admin_url( 'admin-ajax.php' ),
                 'setting_url'       => admin_url( 'options-general.php?page=uucss_legacy' ),
-                'on_board_complete' => apply_filters('uucss/on-board/complete', RapidLoad_Onboard::on_board_completed()),
+                'on_board_complete' => self::is_api_key_verified() || self::get_option('rapidload_onboard_skipped', false),
                 'home_url' => home_url(),
                 'api_url' => RapidLoad_Api::get_key(),
                 'nonce' => self::create_nonce( 'uucss_nonce' ),
@@ -401,15 +316,15 @@ class RapidLoad_Base
                 'notifications' => apply_filters('uucss/notifications', []),
                 'activation_url' => self::activation_url('authorize' ),
                 'onboard_activation_url' => self::onboard_activation_url('authorize' ),
-                'app_url' => defined('UUCSS_APP_URL') ? trailingslashit(UUCSS_APP_URL) : 'https://app.rapidload.io/',
-                //'total_jobs' => RapidLoad_DB::get_total_job_count(),
+                'app_url' => defined('RAPIDLOAD_APP_URL') ? trailingslashit(RAPIDLOAD_APP_URL) : 'https://app.rapidload.io/',
                 'db_tobe_updated' => RapidLoad_DB::$current_version < 1.6,
-                "test_mode" => isset(self::$options['rapidload_test_mode']) && self::$options['rapidload_test_mode'] == "1",
-                "uucss_disable_error_tracking" => isset(self::$options['uucss_disable_error_tracking']) && self::$options['uucss_disable_error_tracking'] == "1"
+                "test_mode" => isset(self::$options['rapidload_test_mode']) && self::$options['rapidload_test_mode'] === "1",
+                "uucss_disable_error_tracking" => isset(self::$options['uucss_disable_error_tracking']) && self::$options['uucss_disable_error_tracking'] === "1",
+                "rapidload_license_data" => $rapidload_license_data
             );
             wp_localize_script( 'uucss_global_admin_script', 'uucss_global', $data );
             wp_enqueue_script( 'uucss_global_admin_script' );
-            wp_enqueue_style( 'uucss_global_admin', UUCSS_PLUGIN_URL . 'assets/css/uucss_global.css', [], UUCSS_VERSION );
+            wp_enqueue_style( 'uucss_global_admin', RAPIDLOAD_PLUGIN_URL . 'assets/css/uucss_global.css', [], RAPIDLOAD_VERSION );
 
         }, apply_filters('uucss/scripts/global/priority', 90));
 
@@ -421,8 +336,8 @@ class RapidLoad_Base
 
         if ( 'plugins.php' === $pagenow )
         {
-            $file   = basename( UUCSS_PLUGIN_FILE );
-            $folder = basename( dirname( UUCSS_PLUGIN_FILE ) );
+            $file   = basename( RAPIDLOAD_PLUGIN_FILE );
+            $folder = basename( dirname( RAPIDLOAD_PLUGIN_FILE ) );
             $hook = "in_plugin_update_message-{$folder}/{$file}";
             add_action( $hook, [$this, 'render_update_message'], 20, 2 );
         }
@@ -431,7 +346,13 @@ class RapidLoad_Base
 
     function render_update_message($plugin_data, $r ){
 
-        $data = @file_get_contents( 'https://raw.githubusercontent.com/shakee93/autoptimize-unusedcss/master/readme.txt?format=txt' );
+        $response = wp_remote_get( 'https://raw.githubusercontent.com/shakee93/autoptimize-unusedcss/master/readme.txt?format=txt' );
+        
+        if ( is_wp_error( $response ) ) {
+            return;
+        }
+
+        $data = wp_remote_retrieve_body( $response );
 
         $changelog  = stristr( $data, '== Changelog ==' );
 
@@ -448,10 +369,10 @@ class RapidLoad_Base
             }
 
             foreach ($changelog as $index => $log){
-                if($index == 3){
+                if($index === 3){
                     break;
                 }
-                echo '<li style="margin-bottom: 0">' . preg_replace("/\r|\n/","",$log) . '</li>';
+                echo '<li style="margin-bottom: 0">' . esc_html(preg_replace("/\r|\n/","",$log)) . '</li>';
             }
 
             if(count($changelog) > 0){
@@ -482,7 +403,7 @@ class RapidLoad_Base
 
     function add_plugin_row_meta_links($plugin_meta, $plugin_file, $plugin_data, $status)
     {
-        if(isset($plugin_data['TextDomain']) && $plugin_data['TextDomain'] == 'autoptimize-unusedcss'){
+        if(isset($plugin_data['TextDomain']) && $plugin_data['TextDomain'] === 'autoptimize-unusedcss'){
             $plugin_meta[] = '<a href="https://docs.rapidload.io/" target="_blank">Documentation</a>';
             $plugin_meta[] = '<a href="https://rapidload.zendesk.com/hc/en-us/requests/new" target="_blank">Submit Ticket</a>';
         }
@@ -514,11 +435,11 @@ class RapidLoad_Base
 
         if($is_multisite){
 
-            self::$options = get_blog_option(get_current_blog_id(), 'autoptimize_uucss_settings', self::get_default_options());
+            self::$options = get_blog_option(get_current_blog_id(), 'rapidload_settings', self::get_default_options());
 
         }else{
 
-            self::$options = get_site_option( 'autoptimize_uucss_settings', self::get_default_options() );
+            self::$options = get_site_option( 'rapidload_settings', self::get_default_options() );
         }
 
         foreach (self::$modules as $module){
@@ -551,15 +472,15 @@ class RapidLoad_Base
 
         self::$paged_options = apply_filters('rapidload/options', self::$options);
 
-        if(isset($_REQUEST['rapidload_delay_js']) && $_REQUEST['rapidload_delay_js'] == "1"){
+        if(isset($_REQUEST['rapidload_delay_js']) && $_REQUEST['rapidload_delay_js'] === "1"){
             self::$paged_options['delay_javascript'] = "1";
             self::$paged_options['uucss_enable_javascript'] = "1";
         }
-        if(isset($_REQUEST['rapidload_defer_js']) && $_REQUEST['rapidload_defer_js'] == "1"){
+        if(isset($_REQUEST['rapidload_defer_js']) && $_REQUEST['rapidload_defer_js'] === "1"){
             self::$paged_options['uucss_load_js_method'] = "defer";
             self::$paged_options['uucss_enable_javascript'] = "1";
         }
-        if(isset($_REQUEST['rapidload_enable_cpcss']) && $_REQUEST['rapidload_enable_cpcss'] == "1"){
+        if(isset($_REQUEST['rapidload_enable_cpcss']) && $_REQUEST['rapidload_enable_cpcss'] === "1"){
             self::$paged_options['uucss_enable_cpcss'] = "1";
             self::$paged_options['uucss_enable_css'] = "1";
         }
@@ -636,17 +557,20 @@ class RapidLoad_Base
             'uucss_enable_cache' => "0",
             'uucss_enable_cdn' => "0",
             'update_htaccess_file' => "0",
-            'uucss_lazy_load_iframes' => "0"
+            'uucss_lazy_load_iframes' => "0",
+            'uucss_disable_add_to_queue' => "1"
 
         ];
     }
 
     public static function uucss_activate() {
 
-        $default_options = self::get_option('autoptimize_uucss_settings',self::get_default_options());
+        RapidLoad_DB::migrate_old_settings('autoptimize_uucss_settings', 'rapidload_settings');
+
+        $default_options = self::get_option('rapidload_settings',self::get_default_options());
 
         if(!isset($default_options['uucss_api_key'])){
-            self::update_option('autoptimize_uucss_settings', $default_options);
+            self::update_rapidload_core_settings($default_options);
         }
 
         add_option( 'rapidload_do_activation_redirect', true );
@@ -658,9 +582,9 @@ class RapidLoad_Base
             return;
         }
 
-        $token = sanitize_text_field( $_REQUEST['rapidload_license'] );
+        $token = sanitize_text_field( wp_unslash( $_REQUEST['rapidload_license'] ) );
 
-        $options = self::get_option( 'autoptimize_uucss_settings' , []);
+        $options = self::get_option( 'rapidload_settings' , []);
 
         if ( ! isset( $options ) || empty( $options ) || ! $options ) {
             $options = [];
@@ -672,10 +596,10 @@ class RapidLoad_Base
 
         if ( !$uucss_api->is_error( $results ) ) {
 
-            $options['uucss_api_key_verified'] = 1;
+            $options['uucss_api_key_verified'] = "1";
             $options['uucss_api_key']          = $token;
 
-            self::update_option( 'autoptimize_uucss_settings', $options );
+            self::update_rapidload_core_settings($options);
 
             header( 'Location: ' . admin_url( 'admin.php?page=rapidload') );
             exit;
@@ -697,13 +621,13 @@ class RapidLoad_Base
             return;
         }
 
-        if ( ! isset( $_REQUEST['nonce'] ) || ! wp_verify_nonce( $_REQUEST['nonce'], 'uucss_activation' ) ) {
+        if ( ! isset( $_REQUEST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ), 'uucss_activation' ) ) {
             self::add_admin_notice( 'RapidLoad : Request verification failed for Activation. Contact support if the problem persists.', 'error' );
 
             return;
         }
 
-        $token = sanitize_text_field( $_REQUEST['token'] );
+        $token = sanitize_text_field( wp_unslash( $_REQUEST['token'] ) );
 
         if ( strlen( $token ) !== 32 ) {
             self::add_admin_notice( 'RapidLoad : Invalid Api Token Received from the Activation. Contact support if the problem persists.', 'error' );
@@ -718,10 +642,10 @@ class RapidLoad_Base
         }
 
         // Hey 👋 you stalker ! you can set this key to true, but its no use ☹️ api_key will be verified on each server request
-        $options['uucss_api_key_verified'] = 1;
+        $options['uucss_api_key_verified'] = "1";
         $options['uucss_api_key']          = $token;
 
-        self::update_option( 'autoptimize_uucss_settings', $options );
+        self::update_rapidload_core_settings($options);
 
         if(!isset($options['whitelist_packs']) || isset($options['whitelist_packs']) && empty($options['whitelist_packs'])){
 
@@ -733,7 +657,7 @@ class RapidLoad_Base
                 $options['whitelist_packs'][] = $white_pack->id . ':' . $white_pack->name;
             }
 
-            self::update_option( 'autoptimize_uucss_settings', $options );
+            self::update_rapidload_core_settings($options);
         }
 
         self::fetch_options(false);
@@ -765,7 +689,7 @@ class RapidLoad_Base
 
         if(isset($data) && isset($data->data) && is_array($data->data)){
             self::$options['suggested_whitelist_packs'] = $data->data;
-            self::update_option( 'autoptimize_uucss_settings', self::$options );
+            self::update_rapidload_core_settings(self::$options);
 
             if(wp_doing_ajax()){
                 wp_send_json_success( $data->data);
@@ -778,7 +702,7 @@ class RapidLoad_Base
     public function rules_enabled(){
         return
             isset(self::$options['uucss_enable_rules']) &&
-            self::$options['uucss_enable_rules'] == "1" &&
+            self::$options['uucss_enable_rules'] === "1" &&
             RapidLoad_DB::$current_version > 1.1 &&
             apply_filters('uucss/rules/enable', true);
     }
@@ -786,7 +710,7 @@ class RapidLoad_Base
     public function critical_css_enabled(){
         return
             isset(self::$options['uucss_enable_cpcss']) &&
-            self::$options['uucss_enable_cpcss'] == "1" &&
+            self::$options['uucss_enable_cpcss'] === "1" &&
             RapidLoad_DB::$current_version > 1.2;
     }
 
@@ -821,7 +745,7 @@ class RapidLoad_Base
     }
 
     public static function cache_file_count(){
-        $uucss_files = isset(UnusedCSS::$base_dir) && !empty(UnusedCSS::$base_dir) ? scandir(UnusedCSS::$base_dir) : [];
+        $uucss_files = isset(RapidLoad_UnusedCSS::$base_dir) && !empty(RapidLoad_UnusedCSS::$base_dir) ? scandir(RapidLoad_UnusedCSS::$base_dir) : [];
         if(is_array($uucss_files)){
             $uucss_files = array_filter($uucss_files, function ($file){
                 return false !== strpos($file, '.css');
@@ -829,7 +753,7 @@ class RapidLoad_Base
         }else{
             $uucss_files = [];
         }
-        $cpcss_files = isset(CriticalCSS::$base_dir) && !empty(CriticalCSS::$base_dir) ? scandir(CriticalCSS::$base_dir) : [];
+        $cpcss_files = isset(RapidLoad_CriticalCSS::$base_dir) && !empty(RapidLoad_CriticalCSS::$base_dir) ? scandir(RapidLoad_CriticalCSS::$base_dir) : [];
         if(is_array($cpcss_files)){
             $cpcss_files = array_filter($cpcss_files, function ($file){
                 return false !== strpos($file, '.css');
@@ -844,17 +768,28 @@ class RapidLoad_Base
 
         $api_key_status = isset( self::$options['uucss_api_key_verified'] ) ? self::$options['uucss_api_key_verified'] : '';
 
-        return $api_key_status == '1';
+        return $api_key_status === '1' || $api_key_status === 1;
 
     }
 
     public static function display_get_start_link() {
-        add_filter( 'plugin_action_links_' . plugin_basename( UUCSS_PLUGIN_FILE ), function ( $links ) {
+        add_filter( 'plugin_action_links_' . plugin_basename( RAPIDLOAD_PLUGIN_FILE ), function ( $links ) {
             $_links = array(
                 '<a href="' . admin_url( 'options-general.php?page=rapidload' ) . '">Get Started <span>⚡️</span> </a>',
             );
 
             return array_merge( $_links, $links );
         } );
+    }
+
+    public static function update_rapidload_core_settings($settings){
+
+        if(is_multisite()){
+
+            return update_blog_option(get_current_blog_id(), "rapidload_settings", $settings);
+
+        }
+        return update_site_option( "rapidload_settings", $settings );
+
     }
 }

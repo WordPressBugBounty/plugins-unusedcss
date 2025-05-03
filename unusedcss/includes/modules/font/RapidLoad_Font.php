@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) or die();
+
 class RapidLoad_Font
 {
     use RapidLoad_Utils;
@@ -14,7 +16,7 @@ class RapidLoad_Font
     {
         $this->options = RapidLoad_Base::get_merged_options();
 
-        if(!isset($this->options['uucss_enable_font_optimization']) || $this->options['uucss_enable_font_optimization'] != "1"){
+        if(!isset($this->options['uucss_enable_font_optimization']) || $this->options['uucss_enable_font_optimization'] !== "1"){
             return;
         }
 
@@ -50,7 +52,7 @@ class RapidLoad_Font
     public function add_admin_clear_action($wp_admin_bar){
         $wp_admin_bar->add_node( array(
             'id'    => 'rapidload-clear-font-cache',
-            'title' => '<span class="ab-label">' . __( 'Clear Font Optimizations', 'clear_optimization' ) . '</span>',
+            'title' => '<span class="ab-label">' . __( 'Clear Font Optimizations', 'unusedcss' ) . '</span>',
             //'href'  => admin_url( 'admin.php?page=rapidload&action=rapidload_purge_all' ),
             'href'   => wp_nonce_url( add_query_arg( array(
                 '_action' => 'rapidload_purge_all',
@@ -132,7 +134,7 @@ class RapidLoad_Font
 
     public function initFileSystem() {
 
-        $this->base = apply_filters('uucss/cache-base-dir', UUCSS_CACHE_CHILD_DIR) . 'font';
+        $this->base = apply_filters('uucss/cache-base-dir', RAPIDLOAD_CACHE_CHILD_DIR) . 'font';
 
         if ( ! $this->file_system ) {
             return false;
@@ -218,9 +220,13 @@ class RapidLoad_Font
 
     public static function download_urls_in_parallel($urls)
     {
-        if(!is_writable(self::$base_dir)){
+
+        $file_system = new RapidLoad_FileSystem();
+
+        if(!$file_system->is_writable(self::$base_dir)){
             return;
         }
+        
         $multi_handle = curl_multi_init();
         $file_pointers = [];
         $curl_handles = [];

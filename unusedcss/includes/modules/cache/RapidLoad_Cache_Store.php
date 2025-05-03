@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) or die();
+
 class RapidLoad_Cache_Store
 {
     private static $cache_file;
@@ -61,8 +63,14 @@ class RapidLoad_Cache_Store
 
         $cache_dir = self::get_cache_dir( $url );
 
-        if ( ! is_dir( $cache_dir ) || !is_writable( $cache_dir )) {
+        $cache_dir_root = dirname($cache_dir);
+
+        if ( ! is_dir( $cache_dir_root ) || !is_writable( $cache_dir_root )) {
             return 'no permission for cache directory';
+        }
+
+        if(!is_dir($cache_dir)){
+            return 'no page cache directory found';
         }
 
         if(defined('DONOTCACHEPAGE') && DONOTCACHEPAGE){
@@ -165,13 +173,13 @@ class RapidLoad_Cache_Store
         if (!is_dir($dirPath)) {
             return;
         }
-        if (substr($dirPath, strlen($dirPath) - 1, 1) != '/') {
+        if (substr($dirPath, strlen($dirPath) - 1, 1) !== '/') {
             $dirPath .= '/';
         }
 
         $files = scandir($dirPath);
         foreach ($files as $file) {
-            if ($file == "." || $file == "..") {
+            if ($file === "." || $file === "..") {
                 continue;
             }
 
@@ -202,7 +210,7 @@ class RapidLoad_Cache_Store
             return $cache;
         }
 
-        $url       = esc_url_raw( $url, array( 'http', 'https' ) );
+        $url       = filter_var($url, FILTER_SANITIZE_URL);
         $cache_dir = self::get_cache_dir( $url );
 
         if ( ! is_dir( $cache_dir ) ) {
@@ -384,7 +392,7 @@ class RapidLoad_Cache_Store
 
     public static function cache_expired( $cache_file ) {
 
-        if ( RapidLoad_Cache_Engine::$settings['cache_expiry_time'] == 0 ) {
+        if ( ((int)RapidLoad_Cache_Engine::$settings['cache_expiry_time']) === 0 ) {
             return false;
         }
 
@@ -635,9 +643,13 @@ class RapidLoad_Cache_Store
             return RAPIDLOAD_CACHE_DIR;
         }
 
-        if ( empty ( $url ) ) {
+        if ( empty ( $url ) && isset( $_SERVER['REQUEST_URI'] ) ) {
             $url = 'http://' . RapidLoad_Cache_Engine::$request_headers['Host'] . RapidLoad_Cache_Engine::sanitize_server_input( $_SERVER['REQUEST_URI'], false );
+        }else{
+            $url = site_url();
         }
+
+        $url = filter_var($url, FILTER_SANITIZE_URL);
 
         $url_host = parse_url( $url, PHP_URL_HOST );
         if ( ! is_string( $url_host ) ) {
@@ -722,7 +734,7 @@ class RapidLoad_Cache_Store
                 $settings_file_name = strtolower( RapidLoad_Cache_Engine::$request_headers['Host'] );
 
                 if ( is_multisite() && defined( 'SUBDOMAIN_INSTALL' ) && ! SUBDOMAIN_INSTALL && ! $skip_blog_path ) {
-                    $url_path = RapidLoad_Cache_Engine::sanitize_server_input( $_SERVER['REQUEST_URI'], false );
+                    $url_path = parse_url( RapidLoad_Cache_Engine::sanitize_server_input( $_SERVER['REQUEST_URI'], false ), PHP_URL_PATH );
                     $url_path_pieces = explode( '/', $url_path, 3 );
                     $blog_path = $url_path_pieces[1];
 
@@ -872,7 +884,7 @@ class RapidLoad_Cache_Store
             }
         }
 
-        $outdated_settings = ( ! empty( $settings ) && ( ! defined( 'UUCSS_VERSION' ) || ! isset( $settings['version'] ) || $settings['version'] !== UUCSS_VERSION ) );
+        $outdated_settings = ( ! empty( $settings ) && ( ! defined( 'RAPIDLOAD_VERSION' ) || ! isset( $settings['version'] ) || $settings['version'] !== RAPIDLOAD_VERSION ) );
 
         if ( $outdated_settings ) {
             $settings = array();
@@ -935,9 +947,9 @@ class RapidLoad_Cache_Store
             'preview' => '',
         );
 
-        if ( isset( $_SERVER['HTTPS'] ) && ( strtolower( $_SERVER['HTTPS'] ) === 'on' || $_SERVER['HTTPS'] == '1' ) ) {
+        if ( isset( $_SERVER['HTTPS'] ) && ( strtolower( $_SERVER['HTTPS'] ) === 'on' || $_SERVER['HTTPS'] === '1' ) ) {
             $cache_keys['scheme'] = 'https-';
-        } elseif ( isset( $_SERVER['SERVER_PORT'] ) && $_SERVER['SERVER_PORT'] == '443' ) {
+        } elseif ( isset( $_SERVER['SERVER_PORT'] ) && $_SERVER['SERVER_PORT'] === '443' ) {
             $cache_keys['scheme'] = 'https-';
         } elseif ( isset(RapidLoad_Cache_Engine::$request_headers['X-Forwarded-Proto']) && RapidLoad_Cache_Engine::$request_headers['X-Forwarded-Proto'] === 'https'
             || isset(RapidLoad_Cache_Engine::$request_headers['X-Forwarded-Scheme']) && RapidLoad_Cache_Engine::$request_headers['X-Forwarded-Scheme'] === 'https'
@@ -990,7 +1002,7 @@ class RapidLoad_Cache_Store
     public static function cache_page( $page_contents ) {
 
         $page_contents = (string) apply_filters( 'rapidload_page_contents_before_store', $page_contents );
-        $page_contents = (string) apply_filters_deprecated( 'rapidload_before_store', array( $page_contents ), UUCSS_VERSION, 'rapidload_page_contents_before_store' );
+        $page_contents = (string) apply_filters_deprecated( 'rapidload_before_store', array( $page_contents ), RAPIDLOAD_VERSION, 'rapidload_page_contents_before_store' );
 
         self::create_cache_file( $page_contents );
     }
@@ -1064,7 +1076,7 @@ class RapidLoad_Cache_Store
         }
 
         $ignore_tags = (array) apply_filters( 'rapidload_minify_html_ignore_tags', array( 'textarea', 'pre', 'code' ) );
-        $ignore_tags = (array) apply_filters_deprecated( 'cache_minify_ignore_tags', array( $ignore_tags ), UUCSS_VERSION, 'rapidload_minify_html_ignore_tags' );
+        $ignore_tags = (array) apply_filters_deprecated( 'cache_minify_ignore_tags', array( $ignore_tags ), RAPIDLOAD_VERSION, 'rapidload_minify_html_ignore_tags' );
 
         if ( ! RapidLoad_Cache_Engine::$settings['minify_inline_css_js'] ) {
             array_push( $ignore_tags, 'style', 'script' );
@@ -1126,7 +1138,7 @@ class RapidLoad_Cache_Store
         }
 
         $converted_page_contents = (string) apply_filters( 'rapidload_page_contents_after_webp_conversion', preg_replace_callback( $image_urls_regex, 'self::convert_webp', $page_contents ) );
-        $converted_page_contents = (string) apply_filters_deprecated( 'rapdiload_disk_webp_converted_data', array( $converted_page_contents ), UUCSS_VERSION, 'radpiload_page_contents_after_webp_conversion' );
+        $converted_page_contents = (string) apply_filters_deprecated( 'rapdiload_disk_webp_converted_data', array( $converted_page_contents ), RAPIDLOAD_VERSION, 'radpiload_page_contents_after_webp_conversion' );
 
         return $converted_page_contents;
     }

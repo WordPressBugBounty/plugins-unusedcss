@@ -17,7 +17,7 @@ class RapidLoad_CSS_Aggregator
     {
         $this->options = RapidLoad_Base::get_merged_options();
 
-        if(!isset($this->options['rapidload_aggregate_css']) || $this->options['rapidload_aggregate_css'] != "1" ){
+        if(!isset($this->options['rapidload_aggregate_css']) || $this->options['rapidload_aggregate_css'] !== "1" ){
             return;
         }
 
@@ -36,7 +36,7 @@ class RapidLoad_CSS_Aggregator
 
     public function initFileSystem() {
 
-        $this->base = apply_filters('uucss/cache-base-dir', UUCSS_CACHE_CHILD_DIR) . 'aggregated';
+        $this->base = apply_filters('uucss/cache-base-dir', RAPIDLOAD_CACHE_CHILD_DIR) . 'aggregated';
 
         if ( ! $this->file_system ) {
             return false;
@@ -83,7 +83,7 @@ class RapidLoad_CSS_Aggregator
             $cdn = self::get_wp_content_url();
         } else {
 
-            $url_parts = parse_url( self::get_wp_content_url() );
+            $url_parts = wp_parse_url( self::get_wp_content_url() );
 
             $cdn = rtrim( $cdn, '/' ) . (isset($url_parts['path']) ? rtrim( $url_parts['path'], '/' ) : '/wp-content');
 

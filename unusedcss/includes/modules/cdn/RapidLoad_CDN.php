@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) or die();
+
 class RapidLoad_CDN
 {
     use RapidLoad_Utils;
@@ -18,7 +20,7 @@ class RapidLoad_CDN
 
         add_action('rapidload/validate-cdn', [$this, 'validate_cdn']);
 
-        if(!isset($this->options['uucss_enable_cdn']) || $this->options['uucss_enable_cdn'] != "1"){
+        if(!isset($this->options['uucss_enable_cdn']) || $this->options['uucss_enable_cdn'] !== "1" || !RapidLoad_Base::is_api_key_verified()){
             return;
         }
 
@@ -59,7 +61,7 @@ class RapidLoad_CDN
             unset($this->options['uucss_cdn_zone_id']);
             unset($this->options['uucss_cdn_url']);
             unset($this->options['uucss_enable_cdn']);
-            RapidLoad_Base::update_option('autoptimize_uucss_settings', $this->options);
+            RapidLoad_Base::update_rapidload_core_settings($this->options);
             RapidLoad_Base::update_option('rapidload_module_cdn',"");
             return true;
         }
@@ -79,7 +81,7 @@ class RapidLoad_CDN
 
             if(isset($this->options['uucss_cdn_zone_id']) && isset($this->options['uucss_cdn_dns_id'])){
 
-                if($this->options['uucss_cdn_zone_id'] != $response->zone_id){
+                if($this->options['uucss_cdn_zone_id'] !== $response->zone_id){
 
                     $api->post('delete-cdn',[
                         'dns_id' => $this->options['uucss_cdn_dns_id'],
@@ -94,7 +96,7 @@ class RapidLoad_CDN
             $this->options['uucss_cdn_dns_id'] = $response->dns_id;
             $this->options['uucss_cdn_url'] = $response->cdn_url;
             RapidLoad_Base::update_option('rapidload_module_cdn',"1");
-            RapidLoad_Base::update_option('autoptimize_uucss_settings', $this->options);
+            RapidLoad_Base::update_rapidload_core_settings($this->options);
             do_action('rapidload/cdn/validated', [
                 'clear' => false,
                 'cdn_url' => isset($this->options['uucss_cdn_url']) ? $this->options['uucss_cdn_url'] : null
@@ -130,7 +132,7 @@ class RapidLoad_CDN
             $cdn = $this->options['uucss_cdn_url'];
         }
 
-        $parsed_url = parse_url($url);
+        $parsed_url = wp_parse_url($url);
 
         if($parsed_url['path'] && !empty($cdn)){
             return untrailingslashit($cdn) . $parsed_url['path'];
@@ -173,7 +175,7 @@ class RapidLoad_CDN
         }
         $search_url = trailingslashit(site_url());
         $replace_url = trailingslashit($args['cdn_url']);
-        if (isset($args['clear']) && boolval($args['clear']) == 1) {
+        if (isset($args['clear']) && boolval($args['clear'])) {
             $temp_url = $search_url;
             $search_url = $replace_url;
             $replace_url = $temp_url;

@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit; // Exit if accessed directly
+}
 
 include_once 'RapidLoad_Utils.php';
 
@@ -33,8 +36,8 @@ if (defined('WP_CLI') && WP_CLI) {
                 }
             }
 
-            $options = RapidLoad_Base::get_option( 'autoptimize_uucss_settings' , RapidLoad_Base::get_default_options());
-            $options['uucss_api_key_verified'] = 1;
+            $options = RapidLoad_Base::get_option( 'rapidload_settings' , RapidLoad_Base::get_default_options());
+            $options['uucss_api_key_verified'] = "1";
             $options['uucss_api_key']          = $license_key;
 
             if (isset($assoc_args['uucss'])) {
@@ -47,7 +50,7 @@ if (defined('WP_CLI') && WP_CLI) {
                 $options['uucss_enable_cpcss'] = "1";
             }
 
-            RapidLoad_Base::update_option( 'autoptimize_uucss_settings', $options );
+            RapidLoad_Base::update_rapidload_core_settings($options);
 
             WP_CLI::success("License Key connected , $license_key!");
         }

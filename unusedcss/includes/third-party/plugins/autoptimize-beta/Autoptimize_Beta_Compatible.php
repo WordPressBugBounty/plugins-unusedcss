@@ -55,7 +55,7 @@ class Autoptimize_Beta_Compatible extends RapidLoad_ThirdParty {
 
         add_filter('cpcss/other-plugins', function ($args){
             $ao_render_blocking = autoptimizeOptionWrapper::get_option( 'autoptimize_css_defer' );
-            if(isset($ao_render_blocking) && $ao_render_blocking == "on"){
+            if(isset($ao_render_blocking) && $ao_render_blocking === "on"){
                 $args[] = 'Autoptimize';
             }
             return $args;
@@ -95,7 +95,7 @@ class Autoptimize_Beta_Compatible extends RapidLoad_ThirdParty {
             ];
         }
 
-        if(autoptimizeOptionWrapper::get_option( 'autoptimize_css_inline' ) == 'on'){
+        if(autoptimizeOptionWrapper::get_option( 'autoptimize_css_inline' ) === 'on'){
             $notifications[] = [
                 "title" => "Incompatible Autoptimize option enabled",
                 "message" => "It is recommended to disable <strong>'inline all css?'</strong> in Autoptimize to RapidLoad to work properly.",
@@ -117,20 +117,20 @@ class Autoptimize_Beta_Compatible extends RapidLoad_ThirdParty {
         return $output;
     }
 
-    public function handle($args){
-
-        if(function_exists('autoptimize') ){
-
-            $tab = 'RapidLoad';
-
-            $args = array_merge( $args, array(
-                'rapidload' => __( '<span class="uucss-tab-title"><img src="' . UUCSS_PLUGIN_URL . '/assets/images/logo-icon.svg' . '" width="15" alt="RapidLoad.io logo"><span>' . $tab . '</span></span>', 'autoptimize' ),
-            ) );
-
+    public function handle($args) {
+        if (function_exists('autoptimize')) {
+    
+            $args = array_merge($args, array(
+                'rapidload' => sprintf(
+                    '<span class="uucss-tab-title"><img src="%s" width="15" alt="RapidLoad.io logo"><span>%s</span></span>',
+                    esc_url(RAPIDLOAD_PLUGIN_URL . '/assets/images/logo-icon.svg'),
+                    __("RapidLoad", "unusedcss")
+                )
+            ));
+    
             return $args;
-
         }
-
+        return $args;
     }
 
     public function render_option_page_ao_admin_tabs(){

@@ -64,26 +64,9 @@ class RapidLoad_Admin_Frontend
 
         $this->load_legacy_ajax();
 
-        /*if($this->is_rapidload_page_optimizer()){
-
-            //$this->load_optimizer_scripts();
-
-            // TODO: temporary should be removed so it supports all the browsers
-            add_filter('script_loader_tag', function ($tag, $handle) {
-
-                if ( 'rapidload_page_optimizer' !== $handle )
-                    return $tag;
-
-                return str_replace( ' src', ' type="module" src', $tag );
-
-            }, 10, 2);
-
-        }*/
-
         if(is_admin()){
 
             add_action( 'admin_menu', array( $this, 'add_developer_settings_page' ) );
-            add_action( 'admin_menu', array( $this, 'add_rapidload_onboard_page' ) );
             add_action( 'admin_menu', array( $this, 'add_page_optimizer_page' ) );
             add_action('uucss/rule/saved', [$this, 'update_rule'], 10, 2);
             add_action('admin_menu', [$this, 'remove_rapidload_legacey_dashboard_menu'], 999);
@@ -93,6 +76,50 @@ class RapidLoad_Admin_Frontend
         add_action( "uucss_run_gpsi_test_for_all", [ $this, 'run_gpsi_test_for_all' ]);
 
         $this->rapidload_purge_all_process_request();
+    }
+
+    public function add_developer_settings_page() {
+
+        global $submenu;
+
+        add_submenu_page( 'options-general.php', 'RapidLoad', 'RapidLoad', 'manage_options', 'uucss_legacy', function () {
+            wp_enqueue_script( 'post' );
+
+            ?>
+            <div class="uucss-wrap">
+                <?php
+                do_action('uucss/options/before_render_form');
+                ?>
+                <div>
+                    <?php $this->render_developer_settings_page() ?>
+                </div>
+            </div>
+
+            <?php
+        });
+
+        register_setting('rapidload_settings', 'rapidload_settings', function($value) {
+            return is_array($value) ? $value : [];
+        });
+
+        $key = null;
+
+        if(!isset($submenu['options-general.php'])){
+            return;
+        }
+
+        $key = array_search(["RapidLoad","manage_options","uucss_legacy","RapidLoad"], $submenu['options-general.php']);
+
+        if(isset($submenu['options-general.php'][$key])){
+            unset($submenu['options-general.php'][$key]);
+        }
+
+    }
+
+    public function render_developer_settings_page(){
+        $options = RapidLoad_Base::fetch_options();
+
+        include('views/developer-settings-page.html.php');
     }
 
     public function load_legacy_ajax(){
@@ -105,7 +132,6 @@ class RapidLoad_Admin_Frontend
             add_action("wp_ajax_rapidload_purge_all", [$this, 'rapidload_purge_all']);
             add_action("wp_ajax_uucss_test_url", [ $this, 'uucss_test_url' ] );
             add_action("wp_ajax_uucss_data", [ $this, 'uucss_data' ] );
-            add_action('wp_ajax_uucss_status', [ $this, 'uucss_status' ] );
             add_action( 'wp_ajax_rapidload_notifications', [$this, 'rapidload_notifications']);
             add_action( "wp_ajax_uucss_update_rule", [ $this, 'uucss_update_rule' ] );
             add_action('wp_ajax_mark_faqs_read', [$this, 'mark_faqs_read']);
@@ -136,7 +162,7 @@ class RapidLoad_Admin_Frontend
 
         self::verify_nonce();
 
-        $notice_id = isset($_REQUEST['notice_id']) ? $_REQUEST['notice_id'] : false;
+        $notice_id = isset($_REQUEST['notice_id']) ? sanitize_text_field(wp_unslash($_REQUEST['notice_id'])) : false;
 
         if($notice_id){
             RapidLoad_Base::update_option('uucss_notice_' . $notice_id . '_read', true);
@@ -163,9 +189,9 @@ class RapidLoad_Admin_Frontend
             wp_send_json_error('Required fields missing');
         }
 
-        $rule = $_REQUEST['rule'];
-        $url = $_REQUEST['url'];
-        $regex = isset($_REQUEST['regex']) ? $_REQUEST['regex'] : '/';
+        $rule = sanitize_text_field( wp_unslash($_REQUEST['rule']) );
+        $url = sanitize_url( wp_unslash($_REQUEST['url']) );
+        $regex = isset($_REQUEST['regex']) ? sanitize_text_field( wp_unslash($_REQUEST['regex']) ) : '/';
 
         $url = $this->transform_url($url);
 
@@ -181,8 +207,8 @@ class RapidLoad_Admin_Frontend
 
         if(isset($_REQUEST['old_rule']) && isset($_REQUEST['old_regex'])){
 
-            $old_rule = $_REQUEST['old_rule'];
-            $old_regex = $_REQUEST['old_regex'];
+            $old_rule = sanitize_text_field( wp_unslash($_REQUEST['old_rule']) );
+            $old_regex = sanitize_text_field( wp_unslash($_REQUEST['old_regex']) );
 
             $rule_exist = new RapidLoad_Job([
                 'rule' => $old_rule,
@@ -193,7 +219,7 @@ class RapidLoad_Admin_Frontend
                 'url' => $url
             ]);
 
-            if(isset($new_rule->id) && $new_rule->rule == "is_url"){
+            if(isset($new_rule->id) && $new_rule->rule === "is_url"){
                $new_rule->delete();
             }
 
@@ -204,9 +230,9 @@ class RapidLoad_Admin_Frontend
                 $rule_exist->regex = $regex;
                 $rule_exist->save(true);
 
-                if(isset($_REQUEST['old_url']) && $_REQUEST['old_url'] != $url ||
-                    $_REQUEST['old_rule'] != $rule || $_REQUEST['old_regex'] != $regex){
-                    if(isset($_REQUEST['requeue']) && $_REQUEST['requeue'] == "1"){
+                if(isset($_REQUEST['old_url']) && sanitize_text_field(wp_unslash($_REQUEST['old_url'])) !== $url ||
+                    sanitize_text_field(wp_unslash($_REQUEST['old_rule'])) !== $rule || sanitize_text_field(wp_unslash($_REQUEST['old_regex'])) !== $regex){
+                    if(isset($_REQUEST['requeue']) && sanitize_text_field(wp_unslash($_REQUEST['requeue'])) === "1"){
                         RapidLoad_DB::requeueJob($rule_exist->id);
                     }
                 }
@@ -220,7 +246,7 @@ class RapidLoad_Admin_Frontend
             'url' => $url
         ]);
 
-        if(isset($new_rule->id) && $new_rule->rule == "is_url"){
+        if(isset($new_rule->id) && $new_rule->rule === "is_url"){
             $new_rule->delete();
         }
 
@@ -293,11 +319,11 @@ class RapidLoad_Admin_Frontend
         $default = [
             [
                 "title" => "I enabled RapidLoad and now my site is broken. What do I do?",
-                "message" => "If you are encountering layout or styling issues on a RapidLoad optimized page, try enabling the “Load Original CSS Files” option or <a href='https://rapidload.zendesk.com/hc/en-us/articles/360063292673-Sitewide-Safelists-Blocklists'>adding safelist rules</a> for affected elements in the plugin Advanced Settings. Always remember to requeue affected pages after making plugin changes. Need more help? Head over to the RapidLoad docs for more information or to submit a Support request: <a href='https://rapidload.zendesk.com/hc/en-us'>https://rapidload.zendesk.com/hc/en-us</a>",
+                "message" => "If you are encountering layout or styling issues on a RapidLoad optimized page, try enabling the \"Load Original CSS Files\" option or <a href='https://rapidload.zendesk.com/hc/en-us/articles/360063292673-Sitewide-Safelists-Blocklists'>adding safelist rules</a> for affected elements in the plugin Advanced Settings. Always remember to requeue affected pages after making plugin changes. Need more help? Head over to the RapidLoad docs for more information or to submit a Support request: <a href='https://rapidload.zendesk.com/hc/en-us'>https://rapidload.zendesk.com/hc/en-us</a>",
             ],
             [
-                "title" => "Why am I still seeing the “Removed unused CSS” flag in Google Page Speed Insights?",
-                "message" => "It’s possible that the RapidLoad optimized version of the page is not yet being served. Try clearing your page cache and running the GPSI test again.",
+                "title" => "Why am I still seeing the \"Removed unused CSS\" flag in Google Page Speed Insights?",
+                "message" => "It's possible that the RapidLoad optimized version of the page is not yet being served. Try clearing your page cache and running the GPSI test again.",
             ],
             [
                 "title" => "Will this plugin work with other caching plugins?",
@@ -309,7 +335,7 @@ class RapidLoad_Admin_Frontend
             ],
             [
                 "title" => "Do you offer support if I need it?",
-                "message" => "Yes, our team is standing by to assist you! Submit a support ticket any time from the Support tab in the plugin and we’ll be happy to help.",
+                "message" => "Yes, our team is standing by to assist you! Submit a support ticket any time from the Support tab in the plugin and we'll be happy to help.",
             ]
         ];
 
@@ -327,10 +353,10 @@ class RapidLoad_Admin_Frontend
             wp_send_json_error('url required');
         }
 
-        $url = $_REQUEST['url'];
-        $type = isset($_REQUEST['type']) ? $_REQUEST['type'] : 'path';
+        $url = sanitize_url(wp_unslash($_REQUEST['url']));
+        $type = isset($_REQUEST['type']) ? sanitize_text_field(wp_unslash($_REQUEST['type'])) : 'path';
 
-        if($type == 'rule'){
+        if($type === 'rule'){
 
             if(!isset($_REQUEST['rule']) || !isset($_REQUEST['regex'])){
                 wp_send_json_error('rule and regex required');
@@ -340,7 +366,7 @@ class RapidLoad_Admin_Frontend
 
         $uucss_api = new RapidLoad_Api();
 
-        $link = $type == 'path' ? new RapidLoad_Job(['url' => $_REQUEST['url']]) : new RapidLoad_Job(['rule' => $_REQUEST['rule'], 'regex' => $_REQUEST['regex']]);
+        $link = $type === 'path' ? new RapidLoad_Job(['url' => $url]) : new RapidLoad_Job(['rule' => sanitize_text_field(wp_unslash($_REQUEST['rule'])), 'regex' => sanitize_text_field(wp_unslash($_REQUEST['regex']))]);
 
         $result = $this->get_gpsi_test_result(new RapidLoad_Job_Data($link, 'uucss'));
 
@@ -359,23 +385,38 @@ class RapidLoad_Admin_Frontend
 
         self::verify_nonce();
 
-        $type = isset($_REQUEST['type']) ? $_REQUEST['type'] : 'path';
+        $type = isset($_REQUEST['type']) ? sanitize_text_field(wp_unslash($_REQUEST['type'])) : 'path';
 
-        $start = isset($_REQUEST['start']) ? $_REQUEST['start'] : 0;
-        $length = isset($_REQUEST['length']) ? $_REQUEST['length'] : 10;
-        $draw = isset($_REQUEST['draw']) ? $_REQUEST['draw'] : 1;
+        $start = isset($_REQUEST['start']) ? absint($_REQUEST['start']) : 0;
+        $length = isset($_REQUEST['length']) ? absint($_REQUEST['length']) : 5;
+
+        $length = 50;
+
+        $draw = isset($_REQUEST['draw']) ? absint($_REQUEST['draw']) : 1;
 
         $status_filter = isset($_REQUEST['columns']) &&
         isset($_REQUEST['columns'][0]) &&
         isset($_REQUEST['columns'][0]['search']) &&
         isset($_REQUEST['columns'][0]['search']['value']) ?
-            $_REQUEST['columns'][0]['search']['value'] : false;
+            sanitize_text_field(wp_unslash($_REQUEST['columns'][0]['search']['value'])) : false;
+
+        $url_filter = isset($_REQUEST['columns']) &&
+        isset($_REQUEST['columns'][1]) &&
+        isset($_REQUEST['columns'][1]['search']) &&
+        isset($_REQUEST['columns'][1]['search']['value']) ?
+            sanitize_text_field(wp_unslash($_REQUEST['columns'][1]['search']['value'])) : false;
+
+        $url_regex = isset($_REQUEST['columns']) &&
+        isset($_REQUEST['columns'][1]) &&
+        isset($_REQUEST['columns'][1]['search']) &&
+        isset($_REQUEST['columns'][1]['search']['regex']) ?
+            sanitize_text_field(wp_unslash($_REQUEST['columns'][1]['search']['regex'])) : false;
 
         $filters = [];
 
         if($status_filter){
 
-            if($status_filter == 'warning'){
+            if($status_filter === 'warning'){
 
                 $filters[] = " warnings IS NOT NULL ";
 
@@ -386,39 +427,17 @@ class RapidLoad_Admin_Frontend
 
         }else{
 
-            $filters[] = " status != 'rule-based' ";
+            $filters[] = " status !== 'rule-based' ";
 
         }
 
-        $url_filter = isset($_REQUEST['columns']) &&
-        isset($_REQUEST['columns'][1]) &&
-        isset($_REQUEST['columns'][1]['search']) &&
-        isset($_REQUEST['columns'][1]['search']['value']) ?
-            $_REQUEST['columns'][1]['search']['value'] : false;
-
-        $url_regex = isset($_REQUEST['columns']) &&
-        isset($_REQUEST['columns'][1]) &&
-        isset($_REQUEST['columns'][1]['search']) &&
-        isset($_REQUEST['columns'][1]['search']['regex']) ?
-            $_REQUEST['columns'][1]['search']['regex'] : false;
-
-        if($type != 'rule'){
-
-            $filters[] = " rule = 'is_url' ";
-
-        }else{
-
-            $filters[] = " rule != 'is_url' ";
-
-        }
-
-        if($url_regex == 'true' && $url_filter){
+        if($url_regex === 'true' && $url_filter){
 
             $filters[] = " url = '". $url_filter . "' ";
 
         }
 
-        if($url_regex == 'false' && $url_filter){
+        if($url_regex === 'false' && $url_filter){
 
             $filters[] = " url LIKE '%%". $url_filter . "%%' ";
 
@@ -428,54 +447,33 @@ class RapidLoad_Admin_Frontend
 
         foreach ($filters as $key => $filter){
 
-            if($key == 0){
+            if($key === 0){
 
-                $where_clause = ' WHERE ';
+                $where_clause = " WHERE ";
                 $where_clause .= $filter;
             }else{
 
-                $where_clause .= ' AND ';
+                $where_clause .= " AND ";
                 $where_clause .= $filter;
             }
 
         }
 
-        $data  = RapidLoad_DB::get_merged_data($start, $length, $where_clause);
+        $data  = RapidLoad_DB::get_merged_data($type === "rule", $start, $length);
 
         wp_send_json([
             'data' => $data,
             "draw" => (int)$draw,
-            "recordsTotal" => RapidLoad_DB::get_total_job_count($type == "path" ? " where rule = 'is_url' and regex = '/'" : " where rule != 'is_url'"),
+            "recordsTotal" => RapidLoad_DB::get_total_job_count($type === "path" ? " where rule = 'is_url' and regex = '/'" : " where rule !== 'is_url'"),
             "recordsFiltered" => RapidLoad_DB::get_total_job_count($where_clause),
             "success" => true
         ]);
 
     }
 
-    public function uucss_status(){
-
-        self::verify_nonce();
-
-        $job_counts = RapidLoad_DB::get_job_counts();
-
-        wp_send_json_success([
-            'cssStyleSheetsCount' => RapidLoad_Base::cache_file_count(),
-            'cssStyleSheetsSize' => $this->size(),
-            'hits' => $job_counts->hits,
-            'success' => $job_counts->success,
-            'ruleBased' => $job_counts->rule_based,
-            'queued' => $job_counts->queued,
-            'waiting' => $job_counts->waiting,
-            'processing' => $job_counts->processing,
-            'warnings' => $job_counts->warnings,
-            'failed' => $job_counts->failed,
-            'total' => $job_counts->total,
-        ]);
-    }
-
     public function run_gpsi_test_for_all(){
 
-        $links = UnusedCSS_DB::get_data("id, hits"," WHERE status IN('success','rule-based') ");
+        $links = RapidLoad_UnusedCSS_DB::get_data_for_gpsi_test();
 
         if(!empty($links)){
 
@@ -543,13 +541,13 @@ class RapidLoad_Admin_Frontend
 
     public function rapidload_purge_all_process_request(){
 
-        if ( empty( $_GET['_nonce'] ) || ! wp_verify_nonce( $_GET['_nonce'], 'uucss_nonce' ) ) {
+        if ( empty( $_GET['_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_nonce'] ) ), 'uucss_nonce' ) || !current_user_can('manage_options')) {
             return;
         }
 
-        $job_type = isset($_GET['_job_type']) ? $_GET['_job_type'] : 'all';
-        $url = isset($_GET['_url']) ? $_GET['_url'] : false;
-        $clear = isset($_GET['_clear']) && boolval($_GET['_clear'] == 'true') ? true : false;
+        $job_type = isset($_GET['_job_type']) ? sanitize_text_field(wp_unslash($_GET['_job_type'])) : 'all';
+        $url = isset($_GET['_url']) ? sanitize_url(wp_unslash($_GET['_url'])) : false;
+        $clear = isset($_GET['_clear']) && boolval($_GET['_clear'] === 'true') ? true : false;
 
         if($clear){
             if ($url){
@@ -573,13 +571,13 @@ class RapidLoad_Admin_Frontend
 
         self::verify_nonce();
 
-        $job_type = isset($_REQUEST['job_type']) ? $_REQUEST['job_type'] : 'all';
-        $url = isset($_REQUEST['url']) ? $_REQUEST['url'] : false;
-        $rule = isset($_REQUEST['rule']) ? $_REQUEST['rule'] : false;
-        $regex = isset($_REQUEST['regex']) ? $_REQUEST['regex'] : false;
-        $clear = isset($_REQUEST['clear']) && boolval($_REQUEST['clear'] == 'true' || $_REQUEST['clear'] == '1') ? true : false;
+        $job_type = isset($_REQUEST['job_type']) ? sanitize_text_field(wp_unslash($_REQUEST['job_type'])    ) : 'all';
+        $url = isset($_REQUEST['url']) ? sanitize_url(wp_unslash($_REQUEST['url'])) : false;
+        $rule = isset($_REQUEST['rule']) ? sanitize_text_field(wp_unslash($_REQUEST['rule'])) : false;
+        $regex = isset($_REQUEST['regex']) ? sanitize_text_field(wp_unslash($_REQUEST['regex'])) : false;
+        $clear = isset($_REQUEST['clear']) && boolval($_REQUEST['clear'] === 'true' || $_REQUEST['clear'] === '1') ? true : false;
         $url_list = isset($_REQUEST['url_list']) ? $_REQUEST['url_list'] : [];
-        $immediate = isset($_REQUEST['immediate']) ? $_REQUEST['immediate'] : false;
+        $immediate = isset($_REQUEST['immediate']) ? boolval($_REQUEST['immediate']) : false;
 
         if($clear){
 
@@ -629,44 +627,44 @@ class RapidLoad_Admin_Frontend
 
             switch ($job_type){
 
-                case 'requeue_all_rule':{
-                    if(!empty($url_list)){
-                        RapidLoad_DB::updateRuleJobDataStatusWhere("queued", "", $url_list);
-                    }else{
-                        RapidLoad_DB::updateRuleJobDataStatusWhere();
+                case 'requeue_all_rule': {
+                    if (!empty($url_list)) {
+                        RapidLoad_DB::updateRuleJobDataStatusWhere("queued", $url_list);
+                    } else {
+                        RapidLoad_DB::updateRuleJobDataStatusWhere("queued", []);
                     }
                     break;
                 }
-                case 'requeue_all_rule_processing':{
-                    RapidLoad_DB::updateRuleJobDataStatusWhere("queued", "AND status = 'processing'");
+                case 'requeue_all_rule_processing': {
+                    RapidLoad_DB::updateRuleJobDataStatusWhere("queued", [], "processing");
                     break;
                 }
-                case 'requeue_all_rule_warnings':{
-                    RapidLoad_DB::updateRuleJobDataStatusWhere("queued", "AND status = 'success' AND warnings IS NOT NULL");
+                case 'requeue_all_rule_warnings': {
+                    RapidLoad_DB::updateRuleJobDataStatusWhere("queued", [], "success");
                     break;
                 }
-                case 'requeue_all_rule_failed':{
-                    RapidLoad_DB::updateRuleJobDataStatusWhere("queued", "AND status = 'failed'");
+                case 'requeue_all_rule_failed': {
+                    RapidLoad_DB::updateRuleJobDataStatusWhere("queued", [], "failed");
                     break;
                 }
-                case 'requeue_all_url':{
-                    if(!empty($url_list)){
-                        RapidLoad_DB::updateUrlJobDataStatusWhere("queued", "", $url_list);
-                    }else{
-                        RapidLoad_DB::updateUrlJobDataStatusWhere();
+                case 'requeue_all_url': {
+                    if (!empty($url_list)) {
+                        RapidLoad_DB::updateUrlJobDataStatusWhere("queued", $url_list);
+                    } else {
+                        RapidLoad_DB::updateUrlJobDataStatusWhere("queued", []);
                     }
                     break;
                 }
                 case 'requeue_all_url_processing':{
-                    RapidLoad_DB::updateUrlJobDataStatusWhere("queued", "AND status = 'processing'");
+                    RapidLoad_DB::updateUrlJobDataStatusWhere("queued", [], "processing");
                     break;
                 }
                 case 'requeue_all_url_warnings':{
-                    RapidLoad_DB::updateUrlJobDataStatusWhere("queued", "AND status = 'success' AND warnings IS NOT NULL");
+                    RapidLoad_DB::updateUrlJobDataStatusWhere("queued", [], "success");
                     break;
                 }
                 case 'requeue_all_url_failed':{
-                    RapidLoad_DB::updateUrlJobDataStatusWhere("queued", "AND status = 'failed'");
+                    RapidLoad_DB::updateUrlJobDataStatusWhere("queued", [], "failed");
                     break;
                 }
                 case 'url':{
@@ -756,7 +754,7 @@ class RapidLoad_Admin_Frontend
                         }
                     }
 
-                    wp_reset_query();
+                    wp_reset_postdata();
 
                     break;
                 }
@@ -773,7 +771,7 @@ class RapidLoad_Admin_Frontend
             wp_send_json_error('rules required');
         }
 
-        $rules = json_decode(stripslashes($_REQUEST['rules']));
+        $rules = json_decode(sanitize_text_field(wp_unslash($_REQUEST['rules'])));
 
         if(!$rules){
             wp_send_json_error('rules required');
@@ -796,73 +794,7 @@ class RapidLoad_Admin_Frontend
 
         self::verify_nonce();
 
-        wp_send_json_success(RapidLoad_Job::all());
-
-    }
-
-    public function add_rapidload_onboard_page(){
-
-        global $submenu;
-
-        add_submenu_page( 'options-general.php', 'RapidLoad', 'RapidLoad', 'manage_options', 'rapidload-on-board', function () {
-            wp_enqueue_script( 'post' );
-
-            ?>
-            <div id="rapidload-on-board">
-
-            </div>
-
-            <?php
-        });
-
-        register_setting('autoptimize_uucss_settings', 'autoptimize_uucss_settings');
-
-        $key = null;
-
-        if(!isset($submenu['options-general.php'])){
-            return;
-        }
-
-        $key = array_search(["RapidLoad","manage_options","rapidload-on-board","RapidLoad"], $submenu['options-general.php']);
-
-        if(isset($submenu['options-general.php'][$key])){
-            unset($submenu['options-general.php'][$key]);
-        }
-    }
-
-    public function add_developer_settings_page() {
-
-        global $submenu;
-
-        add_submenu_page( 'options-general.php', 'RapidLoad', 'RapidLoad', 'manage_options', 'uucss_legacy', function () {
-            wp_enqueue_script( 'post' );
-
-            ?>
-            <div class="uucss-wrap">
-                <?php
-                do_action('uucss/options/before_render_form');
-                ?>
-                <div>
-                    <?php $this->render_developer_settings_page() ?>
-                </div>
-            </div>
-
-            <?php
-        });
-
-        register_setting('autoptimize_uucss_settings', 'autoptimize_uucss_settings');
-
-        $key = null;
-
-        if(!isset($submenu['options-general.php'])){
-            return;
-        }
-
-        $key = array_search(["RapidLoad","manage_options","uucss_legacy","RapidLoad"], $submenu['options-general.php']);
-
-        if(isset($submenu['options-general.php'][$key])){
-            unset($submenu['options-general.php'][$key]);
-        }
+        wp_send_json_success(RapidLoad_Job::all_rules());
 
     }
 
@@ -881,8 +813,6 @@ class RapidLoad_Admin_Frontend
             <?php
         });
 
-        register_setting('autoptimize_uucss_settings', 'autoptimize_uucss_settings');
-
         $key = null;
 
         if(!isset($submenu['options-general.php'])){
@@ -895,12 +825,6 @@ class RapidLoad_Admin_Frontend
             unset($submenu['options-general.php'][$key]);
         }
 
-    }
-
-    public function render_developer_settings_page(){
-        $options = RapidLoad_Base::fetch_options();
-
-        include('views/developer-settings-page.html.php');
     }
 
     public function is_rapidload_page()
@@ -926,12 +850,12 @@ class RapidLoad_Admin_Frontend
     public function load_scripts()
     {
 
-        wp_enqueue_style( 'rapidload_admin_frontend', UUCSS_PLUGIN_URL .  'includes/admin/frontend/dist/assets/index.css',[],UUCSS_VERSION);
+        wp_enqueue_style( 'rapidload_admin_frontend', RAPIDLOAD_PLUGIN_URL .  'includes/admin/frontend/dist/assets/index.css',[],RAPIDLOAD_VERSION);
 
-        wp_register_script( 'rapidload_admin_frontend', UUCSS_PLUGIN_URL .  'includes/admin/frontend/dist/assets/index.min.js',[], UUCSS_VERSION);
+        wp_register_script( 'rapidload_admin_frontend', RAPIDLOAD_PLUGIN_URL .  'includes/admin/frontend/dist/assets/index.min.js',[], RAPIDLOAD_VERSION);
 
         $data = array(
-            'frontend_base' => UUCSS_PLUGIN_URL .  'includes/admin/frontend/dist'
+            'frontend_base' => RAPIDLOAD_PLUGIN_URL .  'includes/admin/frontend/dist'
         );
 
         wp_localize_script( 'rapidload_admin_frontend', 'rapidload_admin', $data );
@@ -945,13 +869,13 @@ class RapidLoad_Admin_Frontend
     public function load_optimizer_scripts()
     {
 
-        wp_enqueue_style( 'rapidload_page_optimizer', UUCSS_PLUGIN_URL .  'includes/admin/page-optimizer/dist/assets/index.css',[],UUCSS_VERSION);
+        wp_enqueue_style( 'rapidload_page_optimizer', RAPIDLOAD_PLUGIN_URL .  'includes/admin/page-optimizer/dist/assets/index.css',[],RAPIDLOAD_VERSION);
 
-        wp_register_script( 'rapidload_page_optimizer', UUCSS_PLUGIN_URL .  'includes/admin/page-optimizer/dist/assets/index.js',[], UUCSS_VERSION);
+        wp_register_script( 'rapidload_page_optimizer', RAPIDLOAD_PLUGIN_URL .  'includes/admin/page-optimizer/dist/assets/index.js',[], RAPIDLOAD_VERSION);
 
         $data = array(
-            'page_optimizer_base' => UUCSS_PLUGIN_URL .  'includes/admin/page-optimizer/dist',
-            'plugin_url' => UUCSS_PLUGIN_URL,
+            'page_optimizer_base' => RAPIDLOAD_PLUGIN_URL .  'includes/admin/page-optimizer/dist',
+            'plugin_url' => RAPIDLOAD_PLUGIN_URL,
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'optimizer_url' => $this->transform_url($this->get_current_url()),
             'nonce' => self::create_nonce( 'uucss_nonce' ),
@@ -967,13 +891,13 @@ class RapidLoad_Admin_Frontend
 
     public function load_preview_scripts()
     {
-        wp_enqueue_style( 'rapidload_page_preview', UUCSS_PLUGIN_URL .  'includes/admin/rapidload-preview/dist/assets/index.css',[],UUCSS_VERSION);
+        wp_enqueue_style( 'rapidload_page_preview', RAPIDLOAD_PLUGIN_URL .  'includes/admin/rapidload-preview/dist/assets/index.css',[],RAPIDLOAD_VERSION);
 
-        wp_register_script( 'rapidload_page_preview', UUCSS_PLUGIN_URL .  'includes/admin/rapidload-preview/dist/assets/index.js',[], UUCSS_VERSION);
+        wp_register_script( 'rapidload_page_preview', RAPIDLOAD_PLUGIN_URL .  'includes/admin/rapidload-preview/dist/assets/index.js',[], RAPIDLOAD_VERSION);
 
         $data = array(
-            'page_preview_base' => UUCSS_PLUGIN_URL .  'includes/admin/rapidload-preview/dist',
-            'plugin_url' => UUCSS_PLUGIN_URL,
+            'page_preview_base' => RAPIDLOAD_PLUGIN_URL .  'includes/admin/rapidload-preview/dist',
+            'plugin_url' => RAPIDLOAD_PLUGIN_URL,
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'nonce' => self::create_nonce( 'uucss_nonce' ),
         );
@@ -988,12 +912,12 @@ class RapidLoad_Admin_Frontend
     public function load_on_board_scripts()
     {
 
-        wp_enqueue_style( 'rapidload_admin_on_board', UUCSS_PLUGIN_URL .  'includes/admin/on-board/on-board-view/dist/assets/index.css', null, '1.23');
+        wp_enqueue_style( 'rapidload_admin_on_board', RAPIDLOAD_PLUGIN_URL .  'includes/admin/on-board/on-board-view/dist/assets/index.css', null, '1.23');
 
-        wp_register_script( 'rapidload_admin_on_board', UUCSS_PLUGIN_URL .  'includes/admin/on-board/on-board-view/dist/assets/index.js', null, '1.23');
+        wp_register_script( 'rapidload_admin_on_board', RAPIDLOAD_PLUGIN_URL .  'includes/admin/on-board/on-board-view/dist/assets/index.js', null, '1.23');
 
         $data = array(
-            'on_board_base' => UUCSS_PLUGIN_URL .  'includes/admin/on-board/on-board-view/dist'
+            'on_board_base' => RAPIDLOAD_PLUGIN_URL .  'includes/admin/on-board/on-board-view/dist'
         );
 
         wp_localize_script( 'rapidload_admin_on_board', 'rapidload_admin', $data );
@@ -1015,23 +939,23 @@ class RapidLoad_Admin_Frontend
             }
         }
 
-        wp_enqueue_script( 'select2', UUCSS_PLUGIN_URL . 'assets/libs/select2/select2.min.js', array( 'jquery' ) );
+        wp_enqueue_script( 'select2', RAPIDLOAD_PLUGIN_URL . 'assets/libs/select2/select2.min.js', array( 'jquery' ) );
 
-        wp_enqueue_script( 'datatables', UUCSS_PLUGIN_URL . 'assets/libs/datatables/jquery.dataTables.min.js', array(
+        wp_enqueue_script( 'datatables', RAPIDLOAD_PLUGIN_URL . 'assets/libs/datatables/jquery.dataTables.min.js', array(
             'jquery',
             'uucss_admin'
         ) );
-        wp_enqueue_style( 'datatables', UUCSS_PLUGIN_URL . 'assets/libs/datatables/jquery.dataTables.min.css' );
+        wp_enqueue_style( 'datatables', RAPIDLOAD_PLUGIN_URL . 'assets/libs/datatables/jquery.dataTables.min.css' );
 
-        wp_register_script( 'uucss_admin', UUCSS_PLUGIN_URL . 'assets/js/uucss_admin.js', array(
+        wp_register_script( 'uucss_admin', RAPIDLOAD_PLUGIN_URL . 'assets/js/uucss_admin.js', array(
             'jquery',
             'wp-util'
-        ), UUCSS_VERSION );
+        ), RAPIDLOAD_VERSION );
 
-        wp_register_script( 'uucss_log', UUCSS_PLUGIN_URL . 'assets/js/uucss_log.js', array(
+        wp_register_script( 'uucss_log', RAPIDLOAD_PLUGIN_URL . 'assets/js/uucss_log.js', array(
             'jquery',
             'wp-util'
-        ), UUCSS_VERSION );
+        ), RAPIDLOAD_VERSION );
 
         $deregister_styles = apply_filters('uucss/styles/deregister',[]);
 
@@ -1041,7 +965,7 @@ class RapidLoad_Admin_Frontend
             }
         }
 
-        wp_enqueue_style( 'uucss_admin', UUCSS_PLUGIN_URL . 'assets/css/uucss_admin.css', [], UUCSS_VERSION );
+        wp_enqueue_style( 'uucss_admin', RAPIDLOAD_PLUGIN_URL . 'assets/css/uucss_admin.css', [], RAPIDLOAD_VERSION );
 
         global $rapidload;
 
@@ -1056,7 +980,7 @@ class RapidLoad_Admin_Frontend
             'notifications' => $this->getNotifications(),
             'faqs' => [],
             'public_notices' => [],
-            'dev_mode' => apply_filters('uucss/dev_mode', isset($this->options['uucss_dev_mode'])) && $this->options['uucss_dev_mode'] == "1",
+            'dev_mode' => apply_filters('uucss/dev_mode', isset($this->options['uucss_dev_mode'])) && $this->options['uucss_dev_mode'] === "1",
             'rules_enabled' => $rapidload->rules_enabled(),
             'cpcss_enabled' => $rapidload->critical_css_enabled(),
             'home_url' => home_url(),
@@ -1068,7 +992,7 @@ class RapidLoad_Admin_Frontend
         wp_enqueue_script( 'uucss_admin' );
         wp_enqueue_script( 'uucss_log' );
 
-        wp_enqueue_style( 'select2', UUCSS_PLUGIN_URL . 'assets/libs/select2/select2.min.css' );
+        wp_enqueue_style( 'select2', RAPIDLOAD_PLUGIN_URL . 'assets/libs/select2/select2.min.css' );
 
     }
 
@@ -1086,7 +1010,7 @@ class RapidLoad_Admin_Frontend
             'edit_posts',
             'rapidload-legacy-dashboard',
             [$this, 'page_legacy'],
-            UUCSS_PLUGIN_URL. 'assets/images/logo-icon-light.svg',
+            RAPIDLOAD_PLUGIN_URL. 'assets/images/logo-icon-light.svg',
             59
         );
 
@@ -1096,7 +1020,7 @@ class RapidLoad_Admin_Frontend
             'edit_posts',
             'rapidload',
             [$this, 'page'],
-            UUCSS_PLUGIN_URL. 'assets/images/logo-icon-light.svg',
+            RAPIDLOAD_PLUGIN_URL. 'assets/images/logo-icon-light.svg',
             59
         );
 
