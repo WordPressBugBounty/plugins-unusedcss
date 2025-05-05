@@ -5,7 +5,7 @@ Donate link:
 Tags: ai, cache, speed, performance, images
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 3.1.10
+Stable tag: 3.1.11
 Requires PHP: 5.4
 License: GPLv3
 License URI: [https://www.gnu.org/licenses/gpl-3.0.html](https://www.gnu.org/licenses/gpl-3.0.html)
@@ -142,6 +142,9 @@ RapidLoad accepts both broad and star(*) expressions and regular expression excl
 3. RapidLoad Dashboard.
 
 == Changelog ==
+
+= 3.1.11 - 05/05/2025 =
+ * fix: renamed PHP classes to follow RapidLoad naming convention
 
 = 3.1.10 - 02/05/2025 =
  * fix: remove bin files from wp.org repo
