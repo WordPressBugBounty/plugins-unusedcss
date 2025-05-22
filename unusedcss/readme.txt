@@ -1,11 +1,11 @@
 === RapidLoad AI - Optimize Web Vitals Automatically === 
 
-Contributors: shakee93, futtta
+Contributors: rapidload, futtta
 Donate link:
 Tags: ai, cache, speed, performance, images
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 3.1.11
+Stable tag: 3.1.12
 Requires PHP: 5.4
 License: GPLv3
 License URI: [https://www.gnu.org/licenses/gpl-3.0.html](https://www.gnu.org/licenses/gpl-3.0.html)
@@ -101,11 +101,11 @@ e.g.
 
 = How much does it cost to purchase a license of RapidLoad and where can I buy one? =
 
-You can purchase the license for as little as $10/m. Just sign up directly via [rapidload.io](https://rapidload.io) website.
+You can purchase the license for as little as $10/m. Just sign up directly via [rapidload.ai](https://rapidload.ai) website.
 
-= What are the Terms and Conditions of rapidload.io usage =
+= What are the Terms and Conditions of rapidload.ai usage =
 
-Read it here : [https://rapidload.io/terms-conditions/](https://rapidload.io/terms-conditions/)
+Read it here : [https://rapidload.ai/terms-conditions/](https://rapidload.ai/terms-conditions/)
 
 = How does this plugin speed up my site? =
 
@@ -142,6 +142,11 @@ RapidLoad accepts both broad and star(*) expressions and regular expression excl
 3. RapidLoad Dashboard.
 
 == Changelog ==
+
+= 3.1.12 - 22/05/2025 =
+ * improve: user ui experience
+ * improve: javascript delay optimization
+ * fix: minor bugs
 
 = 3.1.11 - 05/05/2025 =
  * fix: renamed PHP classes to follow RapidLoad naming convention
